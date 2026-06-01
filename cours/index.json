@@ -1,0 +1,137 @@
+[
+  {
+    "file": "00-introduction.md",
+    "title": "Introduction",
+    "part": null
+  },
+  {
+    "file": "01-le-referentiel-cda-en-bref.md",
+    "title": "Le référentiel CDA en bref",
+    "part": null
+  },
+  {
+    "file": "02-le-cycle-de-vie-d-un-logiciel.md",
+    "title": "Le cycle de vie d'un logiciel",
+    "part": null
+  },
+  {
+    "file": "03-partie-i-conception.md",
+    "title": "PARTIE I — CONCEPTION",
+    "part": null
+  },
+  {
+    "file": "04-1-l-analyse-des-besoins.md",
+    "title": "1. L'analyse des besoins",
+    "part": "PARTIE I — CONCEPTION"
+  },
+  {
+    "file": "05-2-la-modelisation-des-donnees.md",
+    "title": "2. La modélisation des données",
+    "part": "PARTIE I — CONCEPTION"
+  },
+  {
+    "file": "06-3-la-modelisation-uml.md",
+    "title": "3. La modélisation UML",
+    "part": "PARTIE I — CONCEPTION"
+  },
+  {
+    "file": "07-4-le-maquettage-ui-ux.md",
+    "title": "4. Le maquettage (UI/UX)",
+    "part": "PARTIE I — CONCEPTION"
+  },
+  {
+    "file": "08-5-l-architecture-logicielle.md",
+    "title": "5. L'architecture logicielle",
+    "part": "PARTIE I — CONCEPTION"
+  },
+  {
+    "file": "09-partie-ii-developpement.md",
+    "title": "PARTIE II — DÉVELOPPEMENT",
+    "part": null
+  },
+  {
+    "file": "10-6-la-programmation-orientee-objet-poo.md",
+    "title": "6. La programmation orientée objet (POO)",
+    "part": "PARTIE II — DÉVELOPPEMENT"
+  },
+  {
+    "file": "11-7-les-principes-de-conception-solid-co.md",
+    "title": "7. Les principes de conception (SOLID & co.)",
+    "part": "PARTIE II — DÉVELOPPEMENT"
+  },
+  {
+    "file": "12-8-l-architecture-en-couches-en-pratique.md",
+    "title": "8. L'architecture en couches en pratique",
+    "part": "PARTIE II — DÉVELOPPEMENT"
+  },
+  {
+    "file": "13-9-bases-de-donnees-et-sql.md",
+    "title": "9. Bases de données et SQL",
+    "part": "PARTIE II — DÉVELOPPEMENT"
+  },
+  {
+    "file": "14-10-developper-une-api-rest.md",
+    "title": "10. Développer une API REST",
+    "part": "PARTIE II — DÉVELOPPEMENT"
+  },
+  {
+    "file": "15-11-le-developpement-front-end.md",
+    "title": "11. Le développement front-end",
+    "part": "PARTIE II — DÉVELOPPEMENT"
+  },
+  {
+    "file": "16-12-la-gestion-de-versions-avec-git.md",
+    "title": "12. La gestion de versions avec Git",
+    "part": "PARTIE II — DÉVELOPPEMENT"
+  },
+  {
+    "file": "17-13-les-tests.md",
+    "title": "13. Les tests",
+    "part": "PARTIE II — DÉVELOPPEMENT"
+  },
+  {
+    "file": "18-14-synthese-securite-l-owasp-top-10.md",
+    "title": "14. Synthèse sécurité : l'OWASP Top 10",
+    "part": "PARTIE II — DÉVELOPPEMENT"
+  },
+  {
+    "file": "19-partie-iii-deploiement.md",
+    "title": "PARTIE III — DÉPLOIEMENT",
+    "part": null
+  },
+  {
+    "file": "20-15-la-conteneurisation-avec-docker.md",
+    "title": "15. La conteneurisation avec Docker",
+    "part": "PARTIE III — DÉPLOIEMENT"
+  },
+  {
+    "file": "21-16-l-integration-et-le-deploiement-continus-ci-cd.md",
+    "title": "16. L'intégration et le déploiement continus (CI/CD)",
+    "part": "PARTIE III — DÉPLOIEMENT"
+  },
+  {
+    "file": "22-17-la-mise-en-production.md",
+    "title": "17. La mise en production",
+    "part": "PARTIE III — DÉPLOIEMENT"
+  },
+  {
+    "file": "23-18-la-supervision-et-la-maintenance.md",
+    "title": "18. La supervision et la maintenance",
+    "part": "PARTIE III — DÉPLOIEMENT"
+  },
+  {
+    "file": "24-annexe-a-la-securite-a-chaque-etape-recapitulatif.md",
+    "title": "Annexe A — La sécurité à chaque étape (récapitulatif)",
+    "part": "ANNEXES"
+  },
+  {
+    "file": "25-annexe-b-glossaire-express.md",
+    "title": "Annexe B — Glossaire express",
+    "part": "ANNEXES"
+  },
+  {
+    "file": "26-annexe-c-checklist-de-revision.md",
+    "title": "Annexe C — Checklist de révision",
+    "part": "ANNEXES"
+  }
+]

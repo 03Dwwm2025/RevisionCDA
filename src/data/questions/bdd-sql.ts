@@ -141,11 +141,7 @@ ORDER BY d.dateDebut;`,
     theme: 'bdd-sql',
     type: 'qcm',
     difficulte: 2,
-    enonce: 'En Entity Framework Core, que fait ce code ?',
-    codeAvecTrous: `var demandes = await _db.Demandes
-    .Where(d => d.IdSalarie == id && d.Statut == "EN_ATTENTE")
-    .OrderBy(d => d.DateDebut)
-    .ToListAsync();`,
+    enonce: `En Entity Framework Core, que fait ce code ?\n\n\`\`\`csharp\nvar demandes = await _db.Demandes\n    .Where(d => d.IdSalarie == id && d.Statut == "EN_ATTENTE")\n    .OrderBy(d => d.DateDebut)\n    .ToListAsync();\n\`\`\``,
     options: [
       'Charge toutes les demandes en mémoire puis filtre en C#',
       'Génère une requête SQL paramétrée `SELECT … WHERE … ORDER BY` exécutée côté base',

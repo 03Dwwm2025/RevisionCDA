@@ -17,22 +17,6 @@ export const questionsFrontEnd: Question[] = [
       'HTML structure (balises sémantiques : `<header>`, `<nav>`, `<main>`, `<article>`). CSS stylise (Flexbox, Grid, media queries). JS rend interactif. TypeScript ajoute le typage statique : les erreurs de type sont détectées à la compilation, pas au runtime.',
   },
   {
-    id: 'front-002',
-    theme: 'front-end',
-    type: 'qcm',
-    difficulte: 1,
-    enonce: 'Qu\'est-ce qu\'une **SPA** (Single Page Application) ?',
-    options: [
-      'Une application qui n\'a qu\'une seule page HTML statique sans JavaScript',
-      'Une application web dont toute la navigation se fait sans rechargement complet de page (le routage est géré côté client)',
-      'Une application mobile native compilée pour le Web',
-      'Un site web sans base de données',
-    ],
-    bonneReponse: 1,
-    explication:
-      'Dans une SPA (React, Vue, Angular), le navigateur charge l\'app une fois puis navigue entre "pages" via le routeur côté client (React Router). Les données arrivent via des appels API (`fetch`). Avantage : navigation fluide. Contre : temps de chargement initial + SEO à soigner.',
-  },
-  {
     id: 'front-003',
     theme: 'front-end',
     type: 'vrai_faux',
@@ -47,12 +31,12 @@ export const questionsFrontEnd: Question[] = [
     theme: 'front-end',
     type: 'qcm',
     difficulte: 2,
-    enonce: 'Où faut-il stocker un token JWT dans une SPA pour minimiser les risques de vol ?',
+    enonce: 'Où faut-il stocker un token JWT dans une application web pour minimiser les risques de vol ?',
     options: [
       'Dans `localStorage` pour la persistance entre sessions',
       'Dans `sessionStorage` pour la durée de l\'onglet',
       'Dans un cookie `HttpOnly` + `Secure` (non accessible au JavaScript)',
-      'Dans une variable React state exportée globalement',
+      'Dans un paramètre d\'URL (`?token=...`) pour faciliter le partage',
     ],
     bonneReponse: 2,
     explication:
@@ -93,16 +77,6 @@ if (!res.ok) throw new Error(\`Erreur \${res.status}\`);`,
     bonneReponse: 1,
     explication:
       'Flexbox est unidimensionnel (une ligne OU une colonne). CSS Grid est bidimensionnel (lignes ET colonnes). Flexbox est idéal pour les barres de navigation, les cartes alignées, les boutons de formulaire. Grid est mieux pour les layouts de pages entières. Les deux se complètent.',
-  },
-  {
-    id: 'front-007',
-    theme: 'front-end',
-    type: 'vrai_faux',
-    difficulte: 2,
-    enonce: 'React échappe automatiquement le contenu JSX affiché avec `{}`, ce qui protège contre la majorité des attaques XSS courantes.',
-    bonneReponse: true,
-    explication:
-      'React échappe les chaînes insérées via `{variable}` en entités HTML (`<` → `&lt;`). C\'est pourquoi `dangerouslySetInnerHTML` est à éviter : il contourne cette protection. La CSP (Content-Security-Policy) ajoute une couche supplémentaire en interdisant les scripts inline.',
   },
   {
     id: 'front-008',

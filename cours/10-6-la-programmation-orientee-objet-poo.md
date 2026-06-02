@@ -1,335 +1,229 @@
 ## 6. La programmation orientée objet (POO)
 
-La POO organise le code autour d'**objets** qui regroupent des données (attributs) et des comportements (méthodes). Les exemples ci-dessous sont en C# (ta stack principale), mais les concepts sont universels.
+### 6.0 Qu'est-ce qu'une classe ?
+
+Une **classe** est un plan, un moule, qui décrit la structure et le comportement d'un type d'objet. Elle regroupe des **données** (les attributs) et des **comportements** (les méthodes) qui vont ensemble.
+
+Pourquoi utiliser des classes ?
+- **Sécurité** : on contrôle qui peut lire ou modifier les données.
+- **Lisibilité** : le code est organisé par concept métier (`Eleve`, `Demande`, `Salarie`…).
+- **Réutilisabilité** : une classe définie une fois peut être instanciée autant de fois qu'on veut, partout dans le projet.
+
+```csharp
+// Une classe, c'est un moule...
+public class Eleve
+{
+    public string Nom       { get; set; }
+    public string Prenom    { get; set; }
+    public DateOnly DateNaissance { get; set; }
+}
+
+// ...dont on crée autant d'objets qu'on veut
+Eleve eleve1 = new Eleve();
+Eleve eleve2 = new Eleve();
+// eleve1 et eleve2 sont deux objets indépendants, issus du même moule
+```
+
+---
 
 ### 6.1 Le vocabulaire de base
 
 | Terme | Définition |
 | --- | --- |
-| **Classe** | Modèle (moule) qui définit la structure et le comportement d'un objet |
+| **Déclaration** | Réserver un emplacement mémoire pour une variable (`Eleve unEleve;`) |
+| **Initialisation** | Donner une **première valeur** à une variable existante (`unEleve = new Eleve()`) |
+| **Affectation** | Donner une valeur à une variable (pas forcément la première) (`unEleve.Nom = "Martin"`) |
+| **Instanciation** | Déclarer **et** initialiser en une seule opération (`Eleve unEleve = new Eleve()`) |
 | **Objet** | Une **instance** concrète créée à partir d'une classe |
-| **Attribut / Champ** | Une donnée stockée dans la classe (`private decimal _solde`) |
-| **Propriété** | Encapsule un champ avec `get`/`set` — contrôle l'accès |
-| **Méthode** | Un comportement défini dans la classe |
-| **Déclaration** | Réserver un emplacement mémoire (`Eleve e;`) |
-| **Initialisation** | Donner une première valeur (`e = new Eleve()`) |
-| **Instanciation** | Déclaration + initialisation en une ligne (`Eleve e = new Eleve()`) |
+
+```csharp
+Eleve unEleve;                   // Déclaration   — la variable existe en mémoire, sans valeur
+unEleve = new Eleve();           // Initialisation — on lui donne sa première valeur
+
+// Affectation d'une propriété (donne une valeur, mais ce n'est pas la "première valeur" de la variable)
+unEleve.Nom = "Dumont";
+
+// Instanciation : déclaration + initialisation en une ligne
+Eleve autreEleve = new Eleve();
+```
+
+---
+
+### 6.2 Attributs et méthodes
+
+Les **attributs** sont les données propres à chaque objet. Une **méthode** est une fonction définie à l'intérieur de la classe — elle agit sur les attributs ou effectue un calcul.
 
 ```csharp
 public class Eleve
 {
-    // Propriétés auto (get/set générés automatiquement)
-    public string Nom    { get; set; } = "";
-    public string Prenom { get; set; } = "";
+    // Attributs (propriétés)
+    public string  Nom           { get; set; }
+    public string  Prenom        { get; set; }
     public DateOnly DateNaissance { get; set; }
+    public string  AdresseUn     { get; set; }
+    public string  AdresseDeux   { get; set; }
+    public string  CodePostal    { get; set; }
+    public string  Ville         { get; set; }
 
-    public int CalculerAge()
+    // Méthode : une fonction définie dans la classe
+    public int CalculerAge(DateOnly laDateNaissance)
     {
-        var aujourd = DateOnly.FromDateTime(DateTime.Now);
-        int age = aujourd.Year - DateNaissance.Year;
-        if (DateNaissance > aujourd.AddYears(-age)) age--;
+        var dateJour = DateOnly.FromDateTime(DateTime.Now);
+        int age = dateJour.Year - laDateNaissance.Year;
+        // Correction si l'anniversaire n'est pas encore passé cette année
+        if (laDateNaissance > dateJour.AddYears(-age)) age--;
         return age;
     }
 }
+```
 
-// Instanciation
-Eleve e = new Eleve();          // new Eleve() appelle le constructeur
-e.Nom = "Dumont";
-int age = e.CalculerAge();
+**Utilisation :**
 
-// Depuis C# 9 : syntaxe allégée (type inféré)
-Eleve e2 = new() { Nom = "Martin", Prenom = "Léa" };
+```csharp
+Eleve unEleve = new Eleve();                          // instanciation
+unEleve.Nom  = "Dumont";                             // affectation d'un attribut (propriété)
+
+int sonAge = unEleve.CalculerAge(unEleve.DateNaissance); // appel de méthode avec paramètre
 ```
 
 ---
 
-### 6.2 Les propriétés en profondeur
+### 6.3 Encapsulation et modificateurs d'accès
 
-Les propriétés sont le mécanisme d'encapsulation principal en C#. Il en existe plusieurs variantes :
+L'**encapsulation** consiste à contrôler qui peut accéder aux données d'un objet. On expose ce qui doit l'être, on cache le reste.
+
+| Modificateur | Portée |
+| --- | --- |
+| `public` | Accessible de partout |
+| `internal` | Visible uniquement dans le projet (l'assembly) |
+| `protected` | Accessible dans la classe et ses classes enfants uniquement |
+| `private` | Visible uniquement dans la classe elle-même |
+| `static` | Rend l'élément accessible et utilisable sans avoir besoin d'instancier la classe |
 
 ```csharp
 public class CompteBancaire
 {
-    // 1. Champ privé (backing field) + propriété manuelle
-    private decimal _solde;
-    public decimal Solde
-    {
-        get => _solde;
-        private set   // seule la classe peut modifier le solde
-        {
-            if (value < 0) throw new ArgumentException("Solde négatif interdit.");
-            _solde = value;
-        }
-    }
+    private decimal _solde;          // private : personne ne peut lire _solde directement
 
-    // 2. Propriété auto — le compilateur génère le backing field
-    public string Titulaire { get; set; } = "";
-
-    // 3. Lecture seule depuis l'extérieur, modifiable dans la classe
-    public int NbOperations { get; private set; }
-
-    // 4. Init-only (C# 9) — assignable seulement à la création
-    public string IBAN { get; init; } = "";
-
-    // 5. Propriété calculée (pas de backing field)
-    public bool EstPositif => _solde > 0;
+    public decimal Solde => _solde;  // public : on expose la lecture, mais pas l'écriture
 
     public void Deposer(decimal montant)
     {
-        if (montant <= 0) throw new ArgumentException("Montant invalide.");
-        Solde += montant;         // passe par le setter privé
-        NbOperations++;
+        if (montant > 0) _solde += montant; // seule la classe modifie _solde
     }
 }
 
 // Utilisation
-var compte = new CompteBancaire { IBAN = "FR76...", Titulaire = "Valentin" };
-compte.Deposer(500m);
-Console.WriteLine(compte.Solde);      // 500
-Console.WriteLine(compte.EstPositif); // true
-// compte.Solde = -100;               // ❌ erreur de compilation (set private)
-// compte.IBAN  = "autre";            // ❌ erreur (init-only)
+var compte = new CompteBancaire();
+compte.Deposer(500);
+Console.WriteLine(compte.Solde); // 500 ✅
+// compte._solde = -9999;        // ❌ erreur : _solde est private
 ```
+
+**`static` en pratique :**
+
+```csharp
+public class MathUtils
+{
+    // Méthode statique : pas besoin de faire new MathUtils()
+    public static int Max(int a, int b) => a > b ? a : b;
+}
+
+int resultat = MathUtils.Max(10, 42); // appelé directement sur la classe
+```
+
+> **💡 Bonne pratique :** les attributs sont `private`, exposés via des propriétés `public`. Cela permet de valider une valeur avant de l'affecter, ou de la rendre en lecture seule.
 
 ---
 
-### 6.3 Constructeurs et surcharge
+### 6.4 Constructeur et surcharge
 
-Le **constructeur** est une méthode spéciale (même nom que la classe) appelée automatiquement à l'instanciation. Il initialise l'objet dans un état valide.
+Le **constructeur** est une méthode particulière qui porte **le même nom que la classe**. Il est appelé automatiquement lors de l'instanciation et sert à initialiser l'objet dans un état valide.
+
+La **surcharge** (*overload*) permet d'avoir **plusieurs versions d'une méthode avec le même nom** dans une même classe. Pour les distinguer, on change les arguments (nombre ou types). C'est particulièrement utile sur les constructeurs.
 
 ```csharp
 public class Demande
 {
-    public DateOnly Debut   { get; }
-    public DateOnly Fin     { get; }
-    public string   Statut  { get; private set; } = "EN_ATTENTE";
+    public DateOnly Debut     { get; }
+    public DateOnly Fin       { get; }
+    public string   Statut    { get; } = "EN_ATTENTE";
     public int      IdSalarie { get; }
 
-    // Constructeur principal
+    // Constructeur 1 : avec une plage de dates
     public Demande(int idSalarie, DateOnly debut, DateOnly fin)
     {
-        if (fin < debut) throw new ArgumentException("Fin avant début.");
         IdSalarie = idSalarie;
         Debut     = debut;
         Fin       = fin;
     }
 
-    // Surcharge : même jour de début et de fin
+    // Surcharge : même nom, arguments différents — pour un jour unique
     public Demande(int idSalarie, DateOnly jourUnique)
-        : this(idSalarie, jourUnique, jourUnique)  // appelle le constructeur principal
-    { }
+    {
+        IdSalarie = idSalarie;
+        Debut     = jourUnique;
+        Fin       = jourUnique;
+    }
 
+    // Surcharge de méthode ordinaire
     public int NbJours() => (Fin.DayNumber - Debut.DayNumber) + 1;
+    public int NbJours(DateOnly debut, DateOnly fin) => (fin.DayNumber - debut.DayNumber) + 1;
 }
 
+// Les deux constructeurs sont utilisables
 var d1 = new Demande(42, new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 15));
-var d2 = new Demande(42, new DateOnly(2026, 8, 15)); // sur un seul jour
-```
-
-**`readonly` vs `const` :**
-
-```csharp
-public class Regles
-{
-    public const int MAX_JOURS_CONGE = 25;          // compile-time, toujours pareil
-    public readonly DateTime DateCreation;           // défini dans le constructeur, immuable ensuite
-
-    public Regles() { DateCreation = DateTime.Now; }
-}
-```
-
----
-
-### 6.4 Encapsulation et modificateurs d'accès
-
-| Modificateur | Portée |
-| --- | --- |
-| `public` | Accessible de partout |
-| `internal` | Visible dans le même assembly (projet) |
-| `protected` | Classe + classes enfants uniquement |
-| `private` | Classe uniquement (défaut pour les membres) |
-| `protected internal` | Assembly OU enfants |
-
-**Bonne pratique :** champs `private`, exposés via propriétés. On peut ainsi valider, calculer ou limiter l'accès.
-
-**`static` :** appartient à la **classe** elle-même, pas aux instances. Accessible sans `new`.
-
-```csharp
-public class MathUtils
-{
-    // Méthode statique — s'appelle sans instancier MathUtils
-    public static int Clamper(int valeur, int min, int max)
-        => Math.Max(min, Math.Min(max, valeur));
-
-    // Champ statique — partagé entre toutes les instances
-    private static int _compteurInstances = 0;
-}
-
-int v = MathUtils.Clamper(150, 0, 100); // v = 100
+var d2 = new Demande(42, new DateOnly(2026, 8, 15)); // jour unique
 ```
 
 ---
 
 ### 6.5 Héritage
 
-L'héritage permet à une classe **enfant** de réutiliser et d'étendre une classe **parent**.
+L'**héritage** permet à une classe **enfant** de récupérer les attributs et méthodes d'une classe **parent**, puis de les enrichir. On évite la duplication de code.
 
 ```csharp
+// Classe parent
 public class Personne
 {
     public string Nom   { get; set; } = "";
     public string Email { get; set; } = "";
 
-    public virtual string SePresenter()
-        => $"Je m'appelle {Nom}.";
+    public void SePresenter() => Console.WriteLine($"Je m'appelle {Nom}.");
 }
 
+// Classe enfant : hérite de Personne (syntaxe : EnfantClass : ParentClass)
 public class Salarie : Personne
 {
     public decimal SoldeConges { get; set; }
     public string  Service     { get; set; } = "";
-
-    // Appel du constructeur parent avec base()
-    public Salarie(string nom, string email, string service)
-    {
-        Nom     = nom;
-        Email   = email;
-        Service = service;
-    }
-
-    // override : redéfinit la méthode virtuelle du parent
-    public override string SePresenter()
-        => $"{base.SePresenter()} Je travaille au service {Service}.";
-    //          ↑ base.SePresenter() réutilise la version parent
 }
 
-public class Manager : Salarie
-{
-    public Manager(string nom, string email, string service)
-        : base(nom, email, service) { }  // base() transmet les args au constructeur Salarie
-
-    public override string SePresenter()
-        => $"{base.SePresenter()} Je suis manager.";
-}
+// Salarie hérite de Nom, Email et SePresenter()
+Salarie s = new Salarie();
+s.Nom     = "Dumont";   // hérité de Personne
+s.Service = "RH";       // propre à Salarie
+s.SePresenter();        // méthode héritée
 ```
 
-**C# n'autorise pas l'héritage multiple de classes** — une classe ne peut avoir qu'un seul parent. En revanche, elle peut implémenter autant d'interfaces qu'elle veut.
+> En C#, une classe ne peut hériter que d'**une seule classe parent**. En revanche, elle peut implémenter plusieurs interfaces.
 
 ---
 
-### 6.6 `override` vs `new` — la différence critique
+### 6.6 Classe abstraite et polymorphisme
+
+**Classe abstraite** : une classe modèle qui **ne peut pas être instanciée** directement. Elle doit être implémentée par des classes dérivées. Elle peut contenir des méthodes `abstract` (sans corps, à implémenter obligatoirement) et des méthodes `virtual` (avec un corps, redéfinissables avec `override`).
 
 ```csharp
-public class Animal
-{
-    public virtual string Cri() => "...";
-}
-
-// override : liaison tardive (late binding) — le type RÉEL détermine la méthode
-public class Chien : Animal
-{
-    public override string Cri() => "Woof";
-}
-
-// new : masquage (hiding) — le type DÉCLARÉ détermine la méthode
-public class Chat : Animal
-{
-    public new string Cri() => "Miaou";  // masque, ne redéfinit pas
-}
-
-Animal a1 = new Chien();
-Animal a2 = new Chat();
-
-Console.WriteLine(a1.Cri()); // "Woof"  ← override : type réel (Chien)
-Console.WriteLine(a2.Cri()); // "..."   ← new : type déclaré (Animal) !
-```
-
-> **Retenir :** `override` = polymorphisme (comportement selon l'objet réel). `new` = masquage (comportement selon le type de la variable). En pratique, utiliser `override` presque toujours.
-
----
-
-### 6.7 Classe abstraite vs Interface vs `sealed`
-
-**Classe abstraite** — modèle enrichi, non instanciable :
-
-```csharp
-public abstract class Rapport
-{
-    public string Titre { get; set; } = "";
-
-    // Méthode abstraite : DOIT être implémentée par les enfants
-    public abstract string Generer();
-
-    // Méthode concrète : partagée par tous les enfants
-    public void Sauvegarder()
-    {
-        string contenu = Generer(); // appel polymorphique
-        File.WriteAllText($"{Titre}.txt", contenu);
-    }
-}
-
-public class RapportConges : Rapport
-{
-    public override string Generer() => "Liste des congés...";
-}
-// new Rapport() → ❌ erreur, classe abstraite non instanciable
-```
-
-**Interface** — contrat pur, plusieurs implémentations :
-
-```csharp
-public interface IExportable  { byte[] Exporter(); }
-public interface INotifiable  { void Notifier(string msg); }
-
-// Une classe peut implémenter plusieurs interfaces
-public class ServiceConges : IExportable, INotifiable
-{
-    public byte[] Exporter()       => /* ... */ Array.Empty<byte>();
-    public void   Notifier(string msg) => Console.WriteLine(msg);
-}
-```
-
-| | Classe abstraite | Interface |
-| --- | --- | --- |
-| Instanciable | ❌ | ❌ |
-| Champs / état | ✅ | ❌ |
-| Code concret | ✅ | ✅ (depuis C# 8, implémentations par défaut) |
-| Héritage | Un seul parent | Plusieurs interfaces |
-
-**`sealed`** — interdit l'héritage :
-
-```csharp
-public sealed class Singleton
-{
-    private static Singleton? _instance;
-    private Singleton() { }
-    public static Singleton Instance => _instance ??= new Singleton();
-}
-// public class SousClasse : Singleton { } → ❌ erreur
-```
-
----
-
-### 6.8 Polymorphisme — exemple complet
-
-```csharp
-// Hiérarchie
 public abstract class Employe
 {
     public string Nom { get; set; } = "";
+
+    // abstract : pas de corps — les enfants DOIVENT l'implémenter
     public abstract decimal CalculerPrime();
-    public virtual  string  Role()  => "Employé";
-}
 
-public class Stagiaire : Employe
-{
-    public override decimal CalculerPrime() => 0m;
-    public override string  Role()          => "Stagiaire";
-}
-
-public class Developpeur : Employe
-{
-    public override decimal CalculerPrime() => 1000m;
+    // virtual : a un corps, mais les enfants PEUVENT le redéfinir
+    public virtual string Role() => "Employé";
 }
 
 public class Manager : Employe
@@ -338,74 +232,89 @@ public class Manager : Employe
     public override string  Role()          => "Manager";
 }
 
-// Polymorphisme en action
-List<Employe> equipe = new()
+public class Developpeur : Employe
 {
-    new Manager    { Nom = "Alice" },
-    new Developpeur{ Nom = "Bob" },
-    new Stagiaire  { Nom = "Charlie" },
-};
+    public override decimal CalculerPrime() => 1000m;
+    // Role() non redéfini → retourne "Employé" (version parent)
+}
 
-// Même appel, comportement différent selon le type réel
-foreach (var e in equipe)
-    Console.WriteLine($"{e.Nom} ({e.Role()}) → prime : {e.CalculerPrime()}€");
-
-// Alice (Manager) → prime : 2000€
-// Bob (Employé)   → prime : 1000€
-// Charlie (Stagiaire) → prime : 0€
+// new Employe() → ❌ interdit, classe abstraite
 ```
 
----
-
-### 6.9 Les records (C# 9+)
-
-Les **records** sont des classes optimisées pour les données **immutables**. Parfaits pour les DTO.
+**Polymorphisme** : même appel de méthode, comportement différent selon le type réel de l'objet. Il découle de l'héritage et de l'`override`.
 
 ```csharp
-// Déclaration compacte — propriétés init-only, Equals/GetHashCode/ToString générés
-public record DemandeDto(int IdSalarie, DateOnly Debut, DateOnly Fin);
+// La variable est de type Employe, mais l'objet réel est un Manager ou Developpeur
+Employe e1 = new Manager    { Nom = "Alice" };
+Employe e2 = new Developpeur{ Nom = "Bob"   };
 
-var dto = new DemandeDto(42, new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 15));
-var dto2 = dto with { IdSalarie = 99 }; // copie avec modification (non destructif)
-Console.WriteLine(dto == dto2);          // false (comparaison par valeur)
+// Même appel → résultat différent selon le type réel
+Console.WriteLine(e1.CalculerPrime()); // 2000 (Manager)
+Console.WriteLine(e2.CalculerPrime()); // 1000 (Developpeur)
+Console.WriteLine(e1.Role());          // "Manager"
+Console.WriteLine(e2.Role());          // "Employé"
 ```
 
 ---
 
-### 6.10 Collections génériques
+### 6.7 Interface
 
-En pratique, on manipule rarement des tableaux bruts — on utilise les **collections génériques** de `System.Collections.Generic` :
+Une **interface** est un contrat : elle déclare des méthodes et propriétés que toute classe qui l'implémente **devra** fournir. C'est le principe d'un échangeur — on sait ce qu'on peut faire avec un objet sans connaître son implémentation concrète.
 
 ```csharp
-// List<T> — tableau dynamique
-List<Demande> demandes = new();
-demandes.Add(nouvelleDemande);
-demandes.Remove(demande);
-demandes.Where(d => d.Statut == "EN_ATTENTE").ToList();
+// Déclaration de l'interface
+public interface INotifiable
+{
+    void Notifier(string message);
+}
 
-// Dictionary<TKey, TValue> — association clé → valeur
-Dictionary<int, Salarie> salariesParId = new();
-salariesParId[42] = new Salarie { Nom = "Dumont" };
-bool existe = salariesParId.ContainsKey(42);
+public interface IExportable
+{
+    byte[] Exporter();
+}
 
-// HashSet<T> — ensemble sans doublon
-HashSet<string> statuts = new() { "EN_ATTENTE", "VALIDEE", "REFUSEE" };
+// Une classe peut implémenter plusieurs interfaces (contrairement à l'héritage)
+public class ServiceConges : INotifiable, IExportable
+{
+    public void   Notifier(string message) => Console.WriteLine($"Notif : {message}");
+    public byte[] Exporter()               => System.Text.Encoding.UTF8.GetBytes("export...");
+}
 
-// Queue<T> / Stack<T> — file FIFO / pile LIFO
-Queue<string> fileAttente = new();
-fileAttente.Enqueue("demande-1");
-string prochaine = fileAttente.Dequeue();
+// On peut utiliser le type de l'interface
+INotifiable notif = new ServiceConges();
+notif.Notifier("Demande validée !");
 ```
 
-Le `<T>` est un **type générique** : `List<Demande>` accepte uniquement des `Demande`, `List<string>` uniquement des `string`. Le compilateur détecte les erreurs de type avant l'exécution.
+| | Classe abstraite | Interface |
+| --- | --- | --- |
+| Instanciable | ❌ | ❌ |
+| Peut avoir du code concret | ✅ | ❌ (en règle générale) |
+| Peut avoir des champs/état | ✅ | ❌ |
+| Héritage multiple | ❌ (une seule) | ✅ (plusieurs interfaces) |
 
 ---
 
-> **📌 Les quatre piliers à retenir**
+### 6.8 Documenter le code
+
+En C#, le triple slash `///` génère un bloc de documentation structuré, exploité par l'IDE (IntelliSense) et les outils de génération de doc.
+
+```csharp
+/// <summary>
+/// Calcule l'âge de l'élève à partir de sa date de naissance.
+/// </summary>
+/// <param name="laDateNaissance">La date de naissance de l'élève.</param>
+/// <returns>L'âge en années révolues.</returns>
+public int CalculerAge(DateOnly laDateNaissance)
+{
+    // ...
+}
+```
+
+> **📌 Les quatre piliers de la POO**
 >
 > | Pilier | En une phrase |
 > | --- | --- |
 > | **Encapsulation** | Protéger les données, n'exposer que ce qui est nécessaire |
 > | **Héritage** | Réutiliser et spécialiser sans dupliquer |
-> | **Polymorphisme** | Même appel, comportement adapté au type réel |
+> | **Polymorphisme** | Même appel, comportement adapté au type réel de l'objet |
 > | **Abstraction** | Masquer la complexité derrière un contrat clair |

@@ -5,6 +5,7 @@ export type Theme =
   | 'architecture'
   | 'bdd-sql'
   | 'api-rest'
+  | 'back-end'
   | 'front-end'
   | 'git'
   | 'tests'

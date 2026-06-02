@@ -5,6 +5,7 @@ import { questionsSOLID } from './solid';
 import { questionsArchitecture } from './architecture';
 import { questionsBddSql } from './bdd-sql';
 import { questionsApiRest } from './api-rest';
+import { questionsBackEnd } from './back-end';
 import { questionsFrontEnd } from './front-end';
 import { questionsGit } from './git';
 import { questionsTests } from './tests';
@@ -21,6 +22,7 @@ export const QUESTIONS_BY_THEME: Partial<Record<Theme, Question[]>> = {
   architecture: questionsArchitecture,
   'bdd-sql': questionsBddSql,
   'api-rest': questionsApiRest,
+  'back-end': questionsBackEnd,
   'front-end': questionsFrontEnd,
   git: questionsGit,
   tests: questionsTests,
@@ -40,6 +42,7 @@ export const SLUG_TO_THEME: Record<string, Theme> = {
   '12-8-l-architecture-en-couches-en-pratique': 'architecture',
   '13-9-bases-de-donnees-et-sql': 'bdd-sql',
   '14-10-developper-une-api-rest': 'api-rest',
+  '14b-le-developpement-back-end': 'back-end',
   '15-11-le-developpement-front-end': 'front-end',
   '16-12-la-gestion-de-versions-avec-git': 'git',
   '17-13-les-tests': 'tests',

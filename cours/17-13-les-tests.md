@@ -1,194 +1,163 @@
 ## 13. Les tests
 
-Tester, c'est vérifier que le logiciel fait ce qu'on attend — et continue de le faire après chaque modification. Les tests automatisés sont le filet de sécurité qui permet de refactorer et d'évoluer sans régression.
+Tester, c'est vérifier que le logiciel fait ce qu'on attend — et continue de le faire après chaque modification. Les tests automatisés sont le **filet de sécurité** du développeur : ils permettent de refactorer, d'ajouter des fonctionnalités et de corriger des bugs sans craindre d'introduire des régressions ailleurs.
+
+Un projet sans tests force chaque modification à être vérifiée manuellement, intégralement, à chaque fois. Avec des tests, on déroule un clic et on sait en quelques secondes si on a cassé quelque chose.
+
+---
 
 ### 13.1 La pyramide de tests
+
+On organise les tests en trois niveaux, en forme de pyramide : beaucoup de tests rapides à la base, peu de tests lents au sommet.
 
 ```
         ▲
        /E2E\        ← Peu nombreux, lents, coûteux
       /──────\
-     /Intégra-\     ← Nombre modéré, testent plusieurs composants
+     /Intégra-\     ← Nombre modéré
     /──────────\
-   / Unitaires  \   ← Beaucoup, rapides, isolés, base de la pyramide
+   / Unitaires  \   ← Beaucoup, rapides, base de la pyramide
   ──────────────────
 ```
 
-| Niveau | Portée | Vitesse | Quantité |
-| --- | --- | --- | --- |
-| **Unitaires** | Une méthode/classe isolée | Millisecondes | Beaucoup |
-| **Intégration** | Plusieurs composants (service + BDD) | Secondes | Modéré |
-| **End-to-End (E2E)** | L'application complète, comme un utilisateur | Minutes | Peu |
+| Niveau | Portée | Vitesse | Quantité | Exemple |
+| --- | --- | --- | --- | --- |
+| **Unitaires** | Une méthode/classe isolée | Millisecondes | Beaucoup | Tester que `ServiceConges.Deposer()` refuse si les dates sont incohérentes |
+| **Intégration** | Plusieurs composants ensemble | Secondes | Modéré | Tester que le Repository insère bien en base et que le Service le lit |
+| **End-to-End (E2E)** | L'application complète, comme un vrai utilisateur | Minutes | Peu | Simuler un utilisateur qui se connecte, dépose une demande et voit la confirmation |
 
-**Inverser la pyramide** (trop d'E2E, peu d'unitaires) est une erreur fréquente : la CI devient lente, les tests échouent de façon aléatoire (*flaky*), et on perd confiance.
+**Pourquoi cette forme de pyramide ?**
+
+Les tests unitaires sont rapides à écrire, rapides à exécuter et très précis : quand l'un échoue, on sait exactement quelle méthode est en cause. Les tests E2E, eux, sont lents, fragiles (ils dépendent de l'interface, du réseau, de la BDD…) et quand ils échouent, il faut chercher d'où vient le problème.
+
+**Inverser la pyramide** — avoir trop d'E2E et peu d'unitaires — ralentit la CI, génère des tests *flaky* (qui échouent aléatoirement) et fait perdre confiance à l'équipe.
 
 ---
 
-### 13.2 Les tests unitaires et le pattern AAA
+### 13.2 Les tests unitaires
 
-Un test unitaire vérifie **une seule unité de logique** en isolation. Sa structure suit le pattern **AAA** :
+Un test unitaire vérifie **une seule unité de logique** en isolation complète. Il ne touche ni à la base de données, ni au réseau, ni au système de fichiers. Si le test échoue, c'est forcément à cause du code qu'il teste.
 
-```
-Arrange → Act → Assert
-```
+**Caractéristiques d'un bon test unitaire :**
+
+| Critère | Explication |
+| --- | --- |
+| **Rapide** | S'exécute en millisecondes — on peut en lancer des centaines à la seconde |
+| **Isolé** | Ne dépend d'aucun autre test — l'ordre d'exécution ne doit pas avoir d'importance |
+| **Reproductible** | Donne toujours le même résultat, quelle que soit la machine ou le moment |
+| **Précis** | Un test vérifie un seul comportement — si deux assertions échouent, on ne sait plus lequel est le vrai problème |
+| **Auto-documenté** | Le nom du test décrit ce qu'il vérifie : `Deposer_RefuseSiDatesIncoherentes` |
+
+**Le pattern AAA — Arrange, Act, Assert :**
+
+Tout test unitaire se structure en trois étapes :
+- **Arrange** : préparer l'environnement de test (instancier les objets, configurer les dépendances)
+- **Act** : exécuter l'action à tester (appeler la méthode)
+- **Assert** : vérifier que le résultat est celui attendu
 
 ```csharp
-// Test unitaire avec xUnit (.NET)
 [Fact]
 public void Deposer_RefuseSiDatesIncoherentes()
 {
-    // Arrange : préparer le contexte
-    var repo    = new FakeDemandeRepository();
-    var service = new ServiceConges(repo);
+    // Arrange
+    var service = new ServiceConges(new FakeDemandeRepository());
 
-    // Act : exécuter l'action à tester
-    var resultat = service.Deposer(
-        idSalarie: 1,
+    // Act
+    var resultat = service.Deposer(1,
         debut: new DateOnly(2026, 7, 10),
-        fin:   new DateOnly(2026, 7, 1)  // fin < début
-    );
+        fin:   new DateOnly(2026, 7, 1)); // fin avant début
 
-    // Assert : vérifier le résultat
+    // Assert
     Assert.False(resultat.Succes);
     Assert.Equal("Dates incohérentes.", resultat.Message);
 }
 ```
 
-Caractéristiques d'un **bon test unitaire** :
-- **Rapide** : pas de BDD, pas d'I/O réseau
-- **Isolé** : ne dépend pas d'autres tests
-- **Reproductible** : même résultat à chaque exécution
-- **Précis** : un test = un comportement vérifié
+---
+
+### 13.3 Les tests doubles (stubs, mocks, fakes)
+
+Pour isoler le code sous test, on remplace les dépendances réelles (base de données, envoi d'e-mail, appels API externes…) par des **doublures de test**. Ces objets simulent le comportement de la vraie dépendance, sans ses effets de bord.
+
+| Type | Comportement | Quand l'utiliser |
+| --- | --- | --- |
+| **Stub** | Renvoie une valeur préconfigurée | Quand on a besoin d'une dépendance qui retourne une donnée, sans vérifier comment elle est appelée |
+| **Mock** | Vérifie que certaines méthodes ont bien été appelées (avec les bons arguments) | Quand on veut s'assurer qu'une action a bien été déclenchée (ex. un e-mail a bien été envoyé) |
+| **Fake** | Implémentation simplifiée mais fonctionnelle (ex. BDD en mémoire) | Quand on a besoin d'un comportement proche du réel, mais sans la vraie infrastructure |
+
+**Pourquoi les tests doubles sont possibles grâce à DIP ?**
+
+Si `ServiceConges` reçoit une interface `IDemandeRepository` dans son constructeur (et non une classe concrète), on peut lui passer un `FakeDemandeRepository` en test. Le Service ne sait pas qu'il parle à un faux — il fait confiance au contrat de l'interface. C'est l'un des bénéfices concrets du principe de Dependency Inversion vu dans le chapitre SOLID.
 
 ---
 
-### 13.3 Les tests doubles (mocks, stubs, fakes)
+### 13.4 Le TDD — Test-Driven Development
 
-Pour isoler le code sous test, on remplace les dépendances réelles (BDD, e-mail, horloge…) par des **doubles de test** :
-
-| Type | Rôle |
-| --- | --- |
-| **Stub** | Retourne des valeurs préconfigurées, pas de vérification |
-| **Mock** | Vérifie que certaines méthodes ont été appelées |
-| **Fake** | Implémentation simplifiée fonctionnelle (ex. BDD en mémoire) |
-
-```csharp
-// Fake : implémentation en mémoire pour les tests
-public class FakeDemandeRepository : IDemandeRepository
-{
-    private readonly List<Demande> _demandes = new();
-
-    public void Inserer(Demande d) => _demandes.Add(d);
-
-    public List<Demande> GetParSalarie(int id)
-        => _demandes.Where(d => d.IdSalarie == id).ToList();
-}
-```
-
-```csharp
-// Mock avec Moq (librairie .NET)
-var mockRepo = new Mock<IDemandeRepository>();
-mockRepo.Setup(r => r.GetParSalarie(1)).Returns(new List<Demande>());
-
-var service = new ServiceConges(mockRepo.Object);
-// ... appel et assertions ...
-mockRepo.Verify(r => r.Inserer(It.IsAny<Demande>()), Times.Once);
-```
-
-> **💡 Pourquoi DIP rend les tests possibles ?** Si `ServiceConges` dépend de `IDemandeRepository` (interface), on peut injecter un `FakeDemandeRepository` en test. Sans DIP, impossible de tester sans vraie BDD.
-
----
-
-### 13.4 Le TDD (Test-Driven Development)
-
-Le TDD inverse l'ordre classique : **on écrit le test en premier**, puis le code.
+Le TDD est une méthode de développement qui **inverse l'ordre habituel** : on écrit le test avant d'écrire le code qu'il va tester.
 
 **Cycle Red → Green → Refactor :**
 
 ```
-1. RED    : écrire un test qui décrit le comportement souhaité → il échoue (normal)
-2. GREEN  : écrire le minimum de code pour faire passer le test
-3. REFACTOR : améliorer le code sans casser le test
+RED      → Écrire un test qui décrit le comportement voulu.
+           Il échoue immédiatement (le code n'existe pas encore).
+
+GREEN    → Écrire le minimum de code pour faire passer le test.
+           Pas plus, pas mieux — juste ce qu'il faut.
+
+REFACTOR → Améliorer la qualité du code (lisibilité, duplication, nommage)
+           sans modifier son comportement. Les tests prouvent qu'on n'a rien cassé.
 ```
 
-```csharp
-// 1. RED — le test échoue car la méthode n'existe pas encore
-[Fact]
-public void CalculerDuree_RetourneNombreDeJours()
-{
-    var d = new Demande { DateDebut = new DateOnly(2026,7,1), DateFin = new DateOnly(2026,7,5) };
-    Assert.Equal(5, d.CalculerDuree()); // 5 jours inclus
-}
+**Pourquoi travailler ainsi ?**
 
-// 2. GREEN — implémenter juste ce qu'il faut
-public int CalculerDuree() => (DateFin.DayNumber - DateDebut.DayNumber) + 1;
-
-// 3. REFACTOR — renommer, extraire, simplifier si besoin
-```
-
-Avantages du TDD : le test est une **spécification exécutable**, le refactoring est sécurisé, et on ne code que ce qui est nécessaire (YAGNI).
+- Le test devient une **spécification exécutable** : avant de coder, on formalise exactement ce que la méthode doit faire.
+- Le refactoring est **sécurisé** : on peut restructurer librement, les tests confirment que le comportement est préservé.
+- On ne code que ce qui est nécessaire (**YAGNI**) : pas de fonctionnalité "au cas où", le test guide exactement ce qu'il faut implémenter.
+- Le code TDD tend naturellement à être plus modulaire et testable, car écrire un test difficile est souvent le signe d'un couplage trop fort.
 
 ---
 
 ### 13.5 Les tests d'intégration
 
-Les tests d'intégration vérifient que plusieurs composants fonctionnent **ensemble** — y compris la couche SQL.
+Là où les tests unitaires testent une brique isolée, les **tests d'intégration** vérifient que plusieurs briques fonctionnent **correctement ensemble**. Ils peuvent inclure une vraie base de données (en mémoire ou dans un conteneur Docker), des appels entre couches, etc.
 
-```csharp
-public class DemandeRepositoryTests : IDisposable
-{
-    private readonly SqliteConnection _conn;
-    private readonly DemandeRepository _repo;
+**Ce qu'ils permettent de vérifier :**
+- Que le SQL généré est correct et retourne bien les données attendues
+- Que les relations entre tables fonctionnent (jointures, contraintes)
+- Que le Service et le Repository interagissent comme prévu
 
-    public DemandeRepositoryTests()
-    {
-        // BDD SQLite en mémoire — rapide, pas de dépendance externe
-        _conn = new SqliteConnection("Data Source=:memory:");
-        _conn.Open();
-        // ... créer les tables ...
-        _repo = new DemandeRepository(_conn.ConnectionString);
-    }
-
-    [Fact]
-    public void Inserer_PuisGetParSalarie_RetourneLaDemande()
-    {
-        _repo.Inserer(new Demande { IdSalarie = 1, DateDebut = ..., DateFin = ... });
-        var result = _repo.GetParSalarie(1);
-        Assert.Single(result);
-    }
-
-    public void Dispose() => _conn.Dispose();
-}
-```
+**Ce qu'ils ne remplacent pas :**
+Les tests d'intégration sont plus lents et plus complexes à maintenir que les unitaires. Ils ne doivent pas devenir la règle — on les réserve aux zones où l'intégration entre composants est critique (la couche d'accès aux données, notamment).
 
 ---
 
-### 13.6 La couverture de code et la sécurité
+### 13.6 La couverture de code
 
-**Couverture de code** : mesure le pourcentage de lignes exécutées pendant les tests. Utile, mais **100 % de couverture ne garantit pas l'absence de bugs** — on peut couvrir une ligne sans l'asserter correctement.
+La **couverture de code** (*code coverage*) mesure le pourcentage de lignes de code qui ont été **exécutées** au moins une fois pendant les tests. C'est un indicateur utile, mais à ne pas sur-interpréter.
 
-**Tester la sécurité :**
+**Ce que la couverture dit :** telle ligne a été exécutée pendant un test.
 
-```csharp
-[Fact]
-public void Deposer_RefuseSiSalarieNEstPasProprietaire()
-{
-    // Un salarié ne doit pas pouvoir modifier la demande d'un autre
-    var resultat = service.Valider(idDemande: 42, utilisateurConnecte: 99);
-    Assert.Equal(ResultatType.Interdit, resultat.Type); // 403
-}
-```
+**Ce qu'elle ne dit pas :** si le résultat a été correctement vérifié. Un test sans assertion peut couvrir 100 % du code et ne détecter aucun bug.
 
-**SAST et DAST dans la CI :**
+Viser 100 % de couverture n'est donc pas un objectif en soi. Ce qui compte, c'est la **qualité des assertions** : est-ce que les cas limites sont testés ? Les cas d'erreur ? Les règles métier les plus critiques ?
 
-| Outil | Type | Moment |
-| --- | --- | --- |
-| **SAST** (Sonar, Semgrep) | Analyse statique du code | À chaque push |
-| **DAST** (OWASP ZAP) | Test dynamique de l'app déployée | Sur l'environnement de staging |
-| `npm audit` / `dotnet list package --vulnerable` | Dépendances vulnérables | À chaque push |
+---
+
+### 13.7 SAST, DAST et la sécurité dans les tests
+
+Les tests fonctionnels ne suffisent pas à garantir la sécurité. Deux types d'outils complètent le dispositif :
+
+| Outil | Type | Ce qu'il analyse | Quand |
+| --- | --- | --- | --- |
+| **SAST** (*Static Application Security Testing*) | Analyse statique | Le code source, sans l'exécuter — détecte les injections, secrets exposés, mauvaises pratiques | À chaque push (CI) |
+| **DAST** (*Dynamic Application Security Testing*) | Analyse dynamique | L'application en cours d'exécution — teste les réponses HTTP, les failles runtime | Sur l'environnement de staging |
+| `npm audit` / Dependabot | Dépendances | CVE dans les librairies utilisées | À chaque push (CI) |
+
+**Intégrer des tests de sécurité** dans la suite de tests :
+- Vérifier qu'un utilisateur ne peut pas accéder aux données d'un autre (Broken Access Control — OWASP A01)
+- Vérifier que les entrées malveillantes sont rejetées
+- Vérifier que les rôles sont respectés (un salarié ne peut pas valider)
 
 > **🔒 Sécurité**
 >
-> - Inclure des **tests de sécurité** : cas d'accès non autorisé, entrées malveillantes, contrôle des rôles.
-> - **Dependabot** (GitHub) surveille les dépendances et ouvre automatiquement des PRs de mise à jour.
-> - Un test qui passe ne prouve pas l'absence de faille — il prouve que le comportement testé est correct.
+> Un test qui passe ne prouve pas l'absence de faille — il prouve que le comportement **testé** est correct. La sécurité demande des tests dédiés aux cas limites, aux accès non autorisés et aux entrées malveillantes, en plus des tests fonctionnels classiques.

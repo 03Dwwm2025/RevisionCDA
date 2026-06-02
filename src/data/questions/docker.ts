@@ -290,4 +290,69 @@ ___3___:
     explication:
       '`build: .` compile l\'image depuis le Dockerfile local. `service_healthy` attend que le healthcheck de la BDD passe avant de démarrer l\'API (évite les erreurs de connexion au démarrage). `volumes:` déclare le volume nommé `pgdata` pour la persistance.',
   },
+
+  // --- Volumes, réseaux, cycle de vie ---
+  {
+    id: 'docker-018',
+    theme: 'docker',
+    type: 'association',
+    difficulte: 1,
+    enonce: 'Associez chaque type de stockage Docker à sa caractéristique.',
+    paires: [
+      { gauche: 'Volume nommé', droite: 'Géré par Docker, persiste après suppression du conteneur — recommandé pour les BDD' },
+      { gauche: 'Bind mount', droite: 'Monte un dossier de la machine hôte dans le conteneur — pratique en développement' },
+      { gauche: 'tmpfs mount', droite: 'Stockage en mémoire RAM, non persistant — pour les données temporaires sensibles' },
+      { gauche: 'Conteneur (sans volume)', droite: 'Données éphémères : tout est perdu à la suppression du conteneur' },
+    ],
+    explication:
+      'En production, toujours utiliser des **volumes nommés** pour les bases de données : `pgdata:/var/lib/postgresql/data`. Les bind mounts (`./src:/app/src`) sont parfaits en dev pour le hot-reload, mais risqués en prod car dépendent du chemin de l\'hôte.',
+  },
+  {
+    id: 'docker-019',
+    theme: 'docker',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Dans Docker Compose, pourquoi deux services peuvent-ils se joindre par leur nom (ex. `db:5432`) sans configuration réseau supplémentaire ?',
+    options: [
+      'Docker expose automatiquement tous les ports sur l\'hôte',
+      'Compose crée automatiquement un réseau bridge partagé entre tous les services du fichier',
+      'Les services partagent le même réseau `host` que la machine hôte',
+      'Il faut obligatoirement configurer `links:` pour permettre la communication',
+    ],
+    bonneReponse: 1,
+    explication:
+      'Docker Compose crée un réseau bridge virtuel nommé `<projet>_default` et y connecte tous les services. Chaque service est résolvable par son nom de service (`db`, `api`). Le port de la BDD (`5432`) n\'a pas besoin d\'être mappé sur l\'hôte — il est accessible uniquement en interne.',
+  },
+  {
+    id: 'docker-020',
+    theme: 'docker',
+    type: 'remettre_ordre',
+    difficulte: 2,
+    enonce: 'Remettez dans l\'ordre le cycle de vie d\'un conteneur Docker.',
+    elements: [
+      'L\'image est construite (`docker build`) ou téléchargée (`docker pull`)',
+      'Le conteneur est créé à partir de l\'image (`docker run` ou `docker create`)',
+      'Le conteneur est en cours d\'exécution (état `running`)',
+      'Le conteneur est arrêté (`docker stop`) — état `stopped`',
+      'Le conteneur est supprimé (`docker rm`) — libération des ressources',
+    ],
+    explication:
+      'L\'image est immuable (lecture seule). Le conteneur est l\'instance en cours d\'exécution. Un conteneur arrêté peut être redémarré (`docker start`). La suppression est définitive mais les volumes nommés persistent. `docker run` = create + start en une commande.',
+  },
+  {
+    id: 'docker-021',
+    theme: 'docker',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Quelle commande ouvre un **shell interactif** dans un conteneur en cours d\'exécution nommé `api` ?',
+    options: [
+      '`docker logs -f api`',
+      '`docker exec -it api sh`',
+      '`docker inspect api`',
+      '`docker attach api`',
+    ],
+    bonneReponse: 1,
+    explication:
+      '`docker exec -it api sh` : `-i` = mode interactif, `-t` = pseudo-terminal (TTY), `sh` = shell à lancer. Indispensable pour déboguer un conteneur en cours d\'exécution. `docker logs -f` suit les logs. `docker inspect` affiche les métadonnées JSON. `docker attach` se connecte au processus principal (dangereux : `Ctrl+C` arrête le conteneur).',
+  },
 ];

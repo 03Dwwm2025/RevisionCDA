@@ -1,33 +1,61 @@
 ## 11. Le développement front-end
 
-Le front-end est la partie qui s'exécute dans le navigateur de l'utilisateur. Le socle reste **HTML** (structure), **CSS** (style) et **JavaScript** (comportement) — mais les applications modernes s'appuient sur des frameworks comme React.
+Le front-end est la partie qui s'exécute dans le **navigateur** de l'utilisateur. Le socle est constitué de trois langages complémentaires : **HTML** (structure), **CSS** (style) et **JavaScript** (comportement).
 
-### 11.1 Les bases : HTML, CSS, JavaScript
+### 11.1 HTML — structure et sémantique
 
-**HTML sémantique** : utiliser les bonnes balises améliore l'accessibilité et le référencement.
+HTML (*HyperText Markup Language*) décrit la **structure** du contenu. Utiliser les bonnes balises améliore l'accessibilité et le référencement.
 
 ```html
-<!-- ❌ Pas de sémantique -->
-<div class="header"><div class="nav">...</div></div>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>CongeApp</title>
+</head>
+<body>
+  <header>
+    <nav>
+      <ul>
+        <li><a href="/demandes">Mes demandes</a></li>
+        <li><a href="/solde">Mon solde</a></li>
+      </ul>
+    </nav>
+  </header>
 
-<!-- ✅ HTML sémantique -->
-<header>
-  <nav>
-    <ul>
-      <li><a href="/demandes">Mes demandes</a></li>
-      <li><a href="/solde">Mon solde</a></li>
-    </ul>
-  </nav>
-</header>
-<main>
-  <article>...</article>
-</main>
+  <main>
+    <section>
+      <h1>Mes demandes de congé</h1>
+      <article>
+        <h2>Demande #42</h2>
+        <p>Du 01/07/2026 au 15/07/2026 — <strong>En attente</strong></p>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <p>CongeApp © 2026</p>
+  </footer>
+</body>
+</html>
 ```
 
-**CSS — Flexbox et Grid :**
+**Balises sémantiques importantes :** `<header>`, `<nav>`, `<main>`, `<section>`, `<article>`, `<aside>`, `<footer>`, `<h1>–<h6>`, `<form>`, `<button>`, `<input>`.
+
+---
+
+### 11.2 CSS — mise en page et style
+
+CSS (*Cascading Style Sheets*) contrôle l'**apparence** des éléments HTML.
 
 ```css
-/* Flexbox : une dimension (ligne ou colonne) */
+/* Sélecteurs */
+h1          { color: #1a1a2e; }        /* élément */
+.card       { border-radius: 8px; }    /* classe */
+#header     { background: #fff; }      /* id */
+button:hover{ opacity: 0.8; }          /* pseudo-classe */
+
+/* Flexbox — mise en page sur un axe */
 .barre-actions {
   display: flex;
   gap: 1rem;
@@ -35,196 +63,227 @@ Le front-end est la partie qui s'exécute dans le navigateur de l'utilisateur. L
   justify-content: space-between;
 }
 
-/* Grid : deux dimensions (lignes ET colonnes) */
-.dashboard {
+/* Grid — mise en page sur deux axes */
+.layout {
   display: grid;
-  grid-template-columns: 250px 1fr;  /* sidebar + contenu */
+  grid-template-columns: 250px 1fr;  /* sidebar fixe + contenu flexible */
   gap: 1.5rem;
 }
 
-/* Responsive : adapter la mise en page selon la taille d'écran */
+/* Responsive — adapter selon la taille d'écran */
 @media (max-width: 768px) {
-  .dashboard { grid-template-columns: 1fr; }
-}
-```
-
-**TypeScript** : sur-ensemble de JavaScript qui ajoute le typage statique. Les erreurs de type sont détectées à la compilation, pas au runtime.
-
-```typescript
-// JavaScript — erreur découverte à l'exécution
-function calculerDuree(debut, fin) {
-  return fin - debut; // que se passe-t-il si debut est une string ?
-}
-
-// TypeScript — erreur détectée à la compilation
-function calculerDuree(debut: Date, fin: Date): number {
-  return (fin.getTime() - debut.getTime()) / (1000 * 60 * 60 * 24);
+  .layout {
+    grid-template-columns: 1fr;      /* une seule colonne sur mobile */
+  }
 }
 ```
 
 ---
 
-### 11.2 Les SPA et React
+### 11.3 JavaScript — comportement et interactivité
 
-Une **SPA** (*Single Page Application*) charge l'application une fois, puis navigue sans rechargement complet de page. La logique de navigation est gérée côté client.
+JavaScript rend les pages **dynamiques** : réagir aux clics, modifier le DOM, appeler des APIs.
 
-**Avantages :** navigation fluide, moins de charge serveur.  
-**Inconvénients :** temps de chargement initial, SEO à soigner.
+**Les bases du langage :**
 
-**React** repose sur des **composants** — des fonctions qui retournent du JSX :
+```javascript
+// Variables
+let compteur = 0;           // modifiable
+const MAX = 10;             // constante
+var ancien = "éviter var";  // ancienne syntaxe, portée function
 
-```tsx
-// Composant React + TypeScript (CongeApp — liste des demandes)
-interface Demande {
-  id: number;
-  dateDebut: string;
-  dateFin: string;
-  statut: 'EN_ATTENTE' | 'VALIDEE' | 'REFUSEE';
+// Types
+let texte   = "Bonjour";
+let nombre  = 42;
+let decimal = 3.14;
+let booleen = true;
+let rien    = null;
+
+// Fonctions
+function addition(a, b) {
+  return a + b;
 }
 
-function CarteDemande({ demande }: { demande: Demande }) {
-  const couleur = {
-    EN_ATTENTE: 'bg-yellow-100',
-    VALIDEE:    'bg-green-100',
-    REFUSEE:    'bg-red-100',
-  }[demande.statut];
+// Fonction fléchée (arrow function)
+const multiplier = (a, b) => a * b;
 
-  return (
-    <div className={`p-4 rounded-lg ${couleur}`}>
-      <p>{demande.dateDebut} → {demande.dateFin}</p>
-      <span>{demande.statut}</span>
-    </div>
-  );
+// Conditions
+if (compteur >= MAX) {
+  console.log("Maximum atteint");
+} else if (compteur > 5) {
+  console.log("Plus de la moitié");
+} else {
+  console.log("En dessous de 5");
 }
+
+// Boucles
+for (let i = 0; i < 5; i++) {
+  console.log(i);
+}
+
+const demandes = ["Demande 1", "Demande 2"];
+demandes.forEach(d => console.log(d));
+
+// Tableaux
+const noms = ["Alice", "Bob", "Charlie"];
+noms.push("Diana");                         // ajouter
+noms.filter(n => n.startsWith("A"));        // filtrer → ["Alice"]
+noms.map(n => n.toUpperCase());             // transformer
+noms.find(n => n === "Bob");                // trouver
+
+// Objets
+const salarie = {
+  nom: "Dumont",
+  prenom: "Alice",
+  solde: 25,
+  sePresenter() { return `Je suis ${this.nom}`; }
+};
+console.log(salarie.nom);           // "Dumont"
+console.log(salarie["prenom"]);     // "Alice"
 ```
 
-**Hooks essentiels :**
+**Manipulation du DOM :**
 
-```tsx
-import { useState, useEffect } from 'react';
+```javascript
+// Sélectionner des éléments
+const titre = document.getElementById("titre");
+const boutons = document.querySelectorAll("button.action");
 
-function ListeDemandes() {
-  const [demandes, setDemandes] = useState<Demande[]>([]);
-  const [loading, setLoading]   = useState(true);
+// Modifier le contenu
+titre.textContent = "Mes demandes";
+titre.innerHTML = "<strong>Mes demandes</strong>"; // ⚠️ XSS si données non fiables
 
-  // useEffect : déclenché après le rendu (ici, au montage du composant)
-  useEffect(() => {
-    fetch('/api/demandes')
-      .then(res => res.json())
-      .then(data => { setDemandes(data); setLoading(false); });
-  }, []); // [] = exécuté une seule fois
+// Modifier le style
+titre.style.color = "blue";
+titre.classList.add("actif");
+titre.classList.remove("cache");
 
-  if (loading) return <p>Chargement…</p>;
-  return (
-    <ul>
-      {demandes.map(d => <CarteDemande key={d.id} demande={d} />)}
-    </ul>
-  );
-}
+// Écouter des événements
+document.getElementById("btnDeposer").addEventListener("click", function() {
+  console.log("Bouton cliqué !");
+});
+
+// Créer et insérer un élément
+const li = document.createElement("li");
+li.textContent = "Nouvelle demande";
+document.getElementById("listeDemandes").appendChild(li);
 ```
 
----
+**Asynchrone — fetch API :**
 
-### 11.3 Consommer une API REST depuis React
-
-```tsx
-async function deposerDemande(dateDebut: string, dateFin: string, token: string) {
-  const res = await fetch('/api/demandes', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ dateDebut, dateFin }),
+```javascript
+// Appeler une API REST depuis le navigateur
+async function chargerDemandes() {
+  const response = await fetch("/api/demandes", {
+    headers: { "Authorization": `Bearer ${token}` }
   });
 
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.message ?? `Erreur ${res.status}`);
+  if (!response.ok) {
+    console.error("Erreur", response.status);
+    return;
   }
 
-  return res.json(); // la demande créée (201 Created)
-}
-```
-
-**Gestion des états dans un formulaire :**
-
-```tsx
-function FormulaireDepot() {
-  const [dateDebut, setDateDebut] = useState('');
-  const [dateFin,   setDateFin]   = useState('');
-  const [erreur,    setErreur]    = useState('');
-  const [succes,    setSucces]    = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await deposerDemande(dateDebut, dateFin, token);
-      setSucces(true);
-    } catch (err) {
-      setErreur((err as Error).message);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input type="date" value={dateDebut} onChange={e => setDateDebut(e.target.value)} />
-      <input type="date" value={dateFin}   onChange={e => setDateFin(e.target.value)} />
-      {erreur  && <p className="text-red-600">{erreur}</p>}
-      {succes  && <p className="text-green-600">Demande déposée !</p>}
-      <button type="submit">Déposer</button>
-    </form>
-  );
+  const demandes = await response.json();
+  console.log(demandes);
 }
 ```
 
 ---
 
-### 11.4 Routing côté client (React Router)
+### 11.4 Validation des données et expressions régulières (Regex)
 
-```tsx
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+La validation côté client améliore l'expérience utilisateur, mais **ne remplace pas la validation serveur**.
 
-function App() {
-  return (
-    <BrowserRouter>
-      <nav>
-        <Link to="/demandes">Mes demandes</Link>
-        <Link to="/solde">Mon solde</Link>
-      </nav>
-      <Routes>
-        <Route path="/"          element={<Accueil />} />
-        <Route path="/demandes"  element={<ListeDemandes />} />
-        <Route path="/demandes/:id" element={<DetailDemande />} />
-        <Route path="*"          element={<PageIntrouvable />} />
-      </Routes>
-    </BrowserRouter>
-  );
-}
+**Validation HTML5 native :**
+
+```html
+<form id="formulaireDemande">
+  <input type="date" name="dateDebut" required>
+  <input type="date" name="dateFin" required>
+  <input type="email" name="email" required>
+  <input type="text" name="codePostal" pattern="[0-9]{5}" title="5 chiffres">
+  <button type="submit">Déposer</button>
+</form>
 ```
 
----
+**Validation JavaScript avec RegEx :**
 
-### 11.5 Tailwind CSS
+Une **expression régulière** (regex) est un motif qui décrit un format de chaîne de caractères.
 
-Tailwind est un framework CSS *utility-first* : plutôt que d'écrire du CSS, on compose des classes directement dans le HTML/JSX.
+```javascript
+// Syntaxe : /motif/flags
+const emailRegex     = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const codePostalRegex = /^[0-9]{5}$/;
+const telephoneRegex  = /^(\+33|0)[1-9](\d{8})$/;
+const mdpRegex        = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+// mdp : au moins 1 minuscule, 1 majuscule, 1 chiffre, 8 caractères min
 
-```tsx
-// Sans Tailwind
-<button className="btn-primary">Déposer</button>
-// + fichier CSS séparé avec .btn-primary { background: ...; padding: ...; }
+// Tester un format
+function validerEmail(email) {
+  return emailRegex.test(email); // true ou false
+}
 
-// Avec Tailwind — tout inline, pas de fichier CSS séparé
-<button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">
-  Déposer
-</button>
+// Extraire des informations
+const date = "2026-07-01";
+const match = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+if (match) {
+  console.log(`Année: ${match[1]}, Mois: ${match[2]}, Jour: ${match[3]}`);
+}
+
+// Remplacer
+const texte = "Bonjour   monde";
+const sansTropEspaces = texte.replace(/\s+/g, " "); // "Bonjour monde"
+```
+
+**Caractères spéciaux des regex :**
+
+| Symbole | Signification |
+| --- | --- |
+| `^` | Début de la chaîne |
+| `$` | Fin de la chaîne |
+| `.` | N'importe quel caractère |
+| `*` | 0 ou plusieurs fois |
+| `+` | 1 ou plusieurs fois |
+| `?` | 0 ou 1 fois (optionnel) |
+| `{n}` | Exactement n fois |
+| `{n,m}` | Entre n et m fois |
+| `[abc]` | Un parmi a, b ou c |
+| `[a-z]` | Une lettre minuscule |
+| `\d` | Un chiffre (= `[0-9]`) |
+| `\w` | Un caractère de mot (lettres, chiffres, `_`) |
+| `\s` | Un espace (espace, tab, retour chariot) |
+| `(?=...)` | Lookahead — suivi de... |
+
+**Validation d'un formulaire complet :**
+
+```javascript
+document.getElementById("formulaireDemande").addEventListener("submit", function(e) {
+  e.preventDefault(); // empêcher l'envoi par défaut
+
+  const debut = new Date(document.getElementById("dateDebut").value);
+  const fin   = new Date(document.getElementById("dateFin").value);
+  const email = document.getElementById("email").value;
+
+  let erreurs = [];
+
+  if (fin < debut) erreurs.push("La date de fin doit être après la date de début.");
+  if (!emailRegex.test(email)) erreurs.push("L'adresse e-mail est invalide.");
+
+  if (erreurs.length > 0) {
+    document.getElementById("erreurs").textContent = erreurs.join("\n");
+    return;
+  }
+
+  // Envoyer à l'API
+  chargerDemandes();
+});
 ```
 
 ---
 
 > **🔒 Sécurité**
 >
-> - **XSS** : React échappe automatiquement le contenu `{variable}` en HTML. Éviter `dangerouslySetInnerHTML`. Mettre en place une **CSP** (Content-Security-Policy).
-> - **La validation côté client n'est PAS de la sécurité** : elle peut être contournée en quelques secondes (DevTools, Postman). La vraie validation est côté serveur.
-> - **Stockage du JWT** : préférer un cookie `HttpOnly` + `Secure` au `localStorage` (vulnérable au XSS). Si `localStorage`, accepter le risque et mettre en place une CSP stricte.
-> - **CSRF** : protéger les actions sensibles avec l'attribut `SameSite=Strict` sur les cookies et un token anti-CSRF si nécessaire.
+> - **XSS** (*Cross-Site Scripting*) : ne jamais injecter des données non fiables dans `innerHTML`. Utiliser `textContent` à la place.
+> - **La validation côté client n'est PAS de la sécurité** : elle peut être contournée en quelques secondes (DevTools, Postman, curl). La vraie protection est côté serveur.
+> - **Stockage des tokens** : éviter `localStorage` (accessible en JS, donc vulnérable au XSS). Préférer un cookie `HttpOnly` + `Secure`.
+> - **CSRF** : protéger les actions sensibles avec l'attribut `SameSite=Strict` sur les cookies.

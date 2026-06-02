@@ -174,4 +174,78 @@ CREATE TABLE Demande (
     explication:
       'Règle classique : le coût d\'une correction augmente à chaque phase (analyse → design → dev → test → prod). Définir dès l\'analyse qui a le droit de voir quoi (RBAC), quelles données sont collectées (minimisation RGPD), et quelles exigences de sécurité sont non-fonctionnelles évite de refactorer toute l\'architecture plus tard.',
   },
+
+  // --- Cycle de vie ---
+  {
+    id: 'concep-012',
+    theme: 'conception',
+    type: 'association',
+    difficulte: 1,
+    enonce: 'Associez chaque méthode de gestion de projet à sa caractéristique principale.',
+    paires: [
+      { gauche: 'Waterfall (cascade)', droite: 'Étapes séquentielles, plan complet en début de projet' },
+      { gauche: 'Scrum', droite: 'Sprints courts avec démo au client à chaque fin de sprint' },
+      { gauche: 'Kanban', droite: 'Flux continu, tableau de colonnes, limite du WIP' },
+      { gauche: 'Agile (valeur)', droite: 'Logiciel fonctionnel et collaboration client avant plan rigide' },
+    ],
+    explication:
+      'Waterfall = plan complet puis exécution linéaire (bon pour besoins stables). Scrum = itérations courtes avec cérémonie de démo. Kanban = flux continu sans sprints. L\'Agile est un ensemble de valeurs dont Scrum et Kanban sont des implémentations.',
+  },
+  {
+    id: 'concep-013',
+    theme: 'conception',
+    type: 'association',
+    difficulte: 1,
+    enonce: 'Associez chaque rôle Scrum à sa responsabilité.',
+    paires: [
+      { gauche: 'Product Owner', droite: 'Porte la vision du produit et priorise le backlog' },
+      { gauche: 'Scrum Master', droite: 'Facilite les cérémonies et lève les obstacles de l\'équipe' },
+      { gauche: 'Équipe de développement', droite: 'Auto-organisée, réalise les stories du sprint' },
+      { gauche: 'Daily Scrum', droite: 'Réunion quotidienne de 15 min : fait / à faire / blocages' },
+    ],
+    explication:
+      'Le PO représente le client. Le Scrum Master n\'est pas un chef de projet — il est au service de l\'équipe. L\'équipe s\'auto-organise pour choisir comment réaliser les stories. Le Daily est timeboxé à 15 min.',
+  },
+  {
+    id: 'concep-014',
+    theme: 'conception',
+    type: 'vrai_faux',
+    difficulte: 1,
+    enonce: 'Dans un projet en mode Waterfall, le client voit une version fonctionnelle du produit à chaque fin de sprint.',
+    bonneReponse: false,
+    explication:
+      'Dans le Waterfall, le client ne voit le produit qu\'en fin de projet (après toutes les phases). En Agile/Scrum, une démo (*Sprint Review*) est réalisée à chaque fin de sprint. C\'est l\'un des avantages clés de l\'Agile : feedback rapide et régulier.',
+  },
+  {
+    id: 'concep-015',
+    theme: 'conception',
+    type: 'remettre_ordre',
+    difficulte: 2,
+    enonce: 'Remettez dans l\'ordre les cérémonies d\'un sprint Scrum.',
+    elements: [
+      'Sprint Planning — choisir les stories et estimer la charge',
+      'Daily Scrum — synchronisation quotidienne (15 min)',
+      'Sprint Review — démonstration au client, recueil du feedback',
+      'Rétrospective — amélioration continue des pratiques d\'équipe',
+    ],
+    explication:
+      'Planning (début) → Dailys (pendant) → Review (fin, démonstration) → Rétro (fin, amélioration interne). La Review est tournée vers le produit et le client ; la Rétro est tournée vers le fonctionnement de l\'équipe.',
+  },
+
+  // --- ACID dans la modélisation des données ---
+  {
+    id: 'concep-016',
+    theme: 'conception',
+    type: 'association',
+    difficulte: 1,
+    enonce: 'Associez chaque lettre d\'ACID à sa signification (propriétés d\'une base de données).',
+    paires: [
+      { gauche: 'A — Atomicité', droite: 'Tout ou rien : toutes les opérations réussissent ou aucune' },
+      { gauche: 'C — Cohérence', droite: 'La base passe d\'un état valide à un autre état valide' },
+      { gauche: 'I — Intégrité', droite: 'Les données restent exactes et cohérentes (contraintes respectées)' },
+      { gauche: 'D — Durabilité', droite: 'Une transaction validée (COMMIT) survit aux pannes système' },
+    ],
+    explication:
+      'ACID garantit la fiabilité des bases de données relationnelles. L\'atomicité est cruciale pour les opérations liées (déduire un solde ET créer la demande : si l\'un échoue, on ROLLBACK tout). La durabilité repose sur les journaux de transaction (WAL).',
+  },
 ];

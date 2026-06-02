@@ -181,4 +181,82 @@ ORDER BY d.dateDebut;`,
     explication:
       'Ex : `Inscription(idEtudiant, idFormation, dateInscription)` avec `PK = (idEtudiant, idFormation)`. Les attributs portés par l\'association (ex. `dateInscription`) deviennent des colonnes de cette table. On peut aussi ajouter un identifiant technique si la PK composite est trop lourde.',
   },
+
+  // --- Vues, procédures stockées, triggers ---
+  {
+    id: 'bdd-013',
+    theme: 'bdd-sql',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Qu\'est-ce qu\'une **vue** SQL ?',
+    options: [
+      'Une copie physique d\'une table, mise à jour automatiquement',
+      'Une requête SELECT stockée et interrogeable comme une table, sans dupliquer les données',
+      'Un index spécial qui accélère les jointures',
+      'Un synonyme pour une procédure stockée sans paramètres',
+    ],
+    bonneReponse: 1,
+    explication:
+      'Une vue est une requête mémorisée — elle ne stocke pas de données. À chaque appel, elle recalcule le résultat. Utilité : simplifier des jointures complexes répétitives, restreindre l\'accès (on donne accès à la vue, pas à la table), présenter des données pré-filtrées.',
+  },
+  {
+    id: 'bdd-014',
+    theme: 'bdd-sql',
+    type: 'completer_code',
+    difficulte: 2,
+    enonce: 'Complétez cette vue SQL qui liste les demandes en attente avec le nom du salarié.',
+    codeAvecTrous: `___1___ VIEW VueDemandesEnAttente ___2___
+SELECT d.idDemande, d.dateDebut, d.dateFin, s.nom
+FROM Demande d
+JOIN Salarie s ON s.idSalarie = d.idSalarie
+WHERE d.statut = 'EN_ATTENTE';
+
+-- Utilisation
+___3___ * FROM VueDemandesEnAttente ORDER BY dateDebut;`,
+    choix: ['CREATE', 'ALTER', 'DROP', 'AS', 'IS', 'WITH', 'SELECT', 'QUERY', 'GET'],
+    bonnesReponses: ['CREATE', 'AS', 'SELECT'],
+    explication:
+      '`CREATE VIEW nom AS` définit la vue. `AS` introduit la requête de définition. La vue s\'utilise ensuite exactement comme une table avec `SELECT`. Pour la mettre à jour : `ALTER VIEW` ou `CREATE OR REPLACE VIEW`.',
+  },
+  {
+    id: 'bdd-015',
+    theme: 'bdd-sql',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Quelle est la principale différence entre une **procédure stockée** et une **vue** ?',
+    options: [
+      'Une vue peut accepter des paramètres, pas une procédure stockée',
+      'Une procédure stockée peut contenir de la logique (IF, boucles, INSERT/UPDATE/DELETE) et accepter des paramètres ; une vue est uniquement un SELECT',
+      'Les procédures stockées sont plus lentes car elles ne sont pas mises en cache',
+      'Il n\'y a aucune différence, ce sont des synonymes',
+    ],
+    bonneReponse: 1,
+    explication:
+      'Une vue = SELECT mémorisé, lecture seule. Une procédure stockée = bloc de code SQL complet avec logique conditionnelle, paramètres entrants/sortants, possibilité d\'INSERT/UPDATE/DELETE. Elle se déclenche à la demande via `EXEC NomProcedure @param = valeur`.',
+  },
+  {
+    id: 'bdd-016',
+    theme: 'bdd-sql',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce: 'Un **trigger** se déclenche automatiquement lors d\'un événement sur une table (INSERT, UPDATE ou DELETE), sans qu\'on ait besoin de l\'appeler explicitement.',
+    bonneReponse: true,
+    explication:
+      'C\'est la caractéristique fondamentale d\'un trigger : il est invisible dans le code applicatif et s\'exécute automatiquement. Cas d\'usage : journaliser les modifications, maintenir une colonne calculée, enforcer des règles d\'intégrité complexes. À utiliser avec modération : rend le debugging difficile.',
+  },
+  {
+    id: 'bdd-017',
+    theme: 'bdd-sql',
+    type: 'association',
+    difficulte: 3,
+    enonce: 'Associez chaque objet SQL à son rôle.',
+    paires: [
+      { gauche: 'Vue (VIEW)', droite: 'Requête SELECT mémorisée, interrogeable comme une table' },
+      { gauche: 'Procédure stockée', droite: 'Bloc de code SQL paramétrable avec logique métier' },
+      { gauche: 'Trigger', droite: 'Code déclenché automatiquement sur INSERT/UPDATE/DELETE' },
+      { gauche: 'Index', droite: 'Structure accélérant les recherches sur une colonne' },
+    ],
+    explication:
+      'Vue = simplification de lecture. Procédure = encapsulation de logique. Trigger = automatisation réactive. Index = optimisation des performances. Ces quatre objets sont les outils avancés du DBA au-delà des simples tables et requêtes.',
+  },
 ];

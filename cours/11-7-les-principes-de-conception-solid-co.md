@@ -1,12 +1,22 @@
 ## 7. Les principes de conception (SOLID & co.)
 
-Écrire du code qui *marche* ne suffit pas : il doit être **maintenable**. SOLID est un ensemble de cinq principes de conception objet qui rendent le code extensible, testable et résistant au changement.
+Écrire du code qui *marche* ne suffit pas : il doit être **maintenable**. SOLID est un ensemble de cinq principes de conception objet formulés par Robert C. Martin. Ils visent à réduire le **couplage** (dépendances entre les composants) et à augmenter la **cohésion** (une classe = une responsabilité claire).
 
-### 7.1 S — Single Responsibility Principle (SRP)
+| Lettre | Principe | Idée centrale |
+| --- | --- | --- |
+| **S** | Single Responsibility | Une classe = une seule responsabilité, une seule raison de changer |
+| **O** | Open/Closed | Ouvert à l'extension, fermé à la modification |
+| **L** | Liskov Substitution | Un enfant peut remplacer son parent sans rien casser |
+| **I** | Interface Segregation | Plusieurs interfaces spécifiques > une interface fourre-tout |
+| **D** | Dependency Inversion | Dépendre d'abstractions, pas d'implémentations concrètes |
 
-> **Une classe = une seule raison de changer.**
+---
 
-Si une classe fait deux choses, elle doit changer pour deux raisons différentes — ce qui augmente le risque de régression.
+### 7.1 S — Single Responsibility Principle
+
+**Théorie :** Une classe ne doit avoir qu'une seule **raison de changer**. Si une classe peut changer pour deux raisons différentes, elle a deux responsabilités — c'est une violation du SRP.
+
+Une classe qui gère trop de choses est difficile à comprendre, à tester et à faire évoluer : modifier la logique d'envoi d'e-mail ne devrait pas risquer de casser le calcul des congés.
 
 **Violation :**
 
@@ -14,105 +24,80 @@ Si une classe fait deux choses, elle doit changer pour deux raisons différentes
 public class ServiceConges
 {
     public Resultat Deposer(DemandeDto dto) { /* règles métier */ }
-    public void EnvoyerEmailNotification(string email) { /* SMTP */ }
-    public string GenererPdfRécapitulatif(int idDemande) { /* PDF */ }
+    public void EnvoyerEmail(string email)  { /* SMTP — 2ème responsabilité */ }
+    public string GenererPdf(int id)        { /* PDF   — 3ème responsabilité */ }
 }
 ```
-
-`ServiceConges` gère ici la logique métier, l'envoi d'e-mails et la génération de PDF. Si le format du PDF change, on modifie un service de congés — incohérent.
 
 **Correction :**
 
 ```csharp
-public class ServiceConges     { public Resultat Deposer(DemandeDto dto) { ... } }
-public class ServiceNotification { public void Envoyer(string email, string msg) { ... } }
-public class ServicePdf         { public string Generer(int idDemande) { ... } }
+public class ServiceConges      { public Resultat Deposer(DemandeDto dto) { ... } }
+public class ServiceNotification { public void Envoyer(string email) { ... } }
+public class ServicePdf          { public string Generer(int id) { ... } }
 ```
-
-Chaque classe a une responsabilité unique et une seule raison de changer.
 
 ---
 
-### 7.2 O — Open/Closed Principle (OCP)
+### 7.2 O — Open/Closed Principle
 
-> **Ouvert à l'extension, fermé à la modification.**
+**Théorie :** Un module doit être **ouvert à l'extension** (on peut ajouter de nouveaux comportements) mais **fermé à la modification** (le code existant et stabilisé ne doit pas être retouché). On étend via l'héritage ou les interfaces plutôt qu'en modifiant ce qui fonctionne.
 
-On doit pouvoir ajouter un nouveau comportement sans modifier le code existant et stabilisé.
+L'objectif est de pouvoir faire évoluer le logiciel sans risquer de casser ce qui marchait.
 
-**Violation :**
+**Violation :** chaque nouveau type de prime nécessite de modifier `ServicePaie`.
 
 ```csharp
 public decimal CalculerPrime(Employe e)
 {
     if (e.Type == "manager")   return 2000m;
     if (e.Type == "terrain")   return 1500m;
-    if (e.Type == "stagiaire") return 0m;
-    // À chaque nouveau type, on retouche cette méthode
+    // Ajouter un type = modifier cette méthode = risque de régression
 }
 ```
 
-**Correction via interface :**
+**Correction :** on étend sans modifier.
 
 ```csharp
-public interface ICalculPrime
-{
-    decimal Calculer(Employe e);
-}
+public interface ICalculPrime { decimal Calculer(Employe e); }
 
 public class PrimeManager  : ICalculPrime { public decimal Calculer(Employe e) => 2000m; }
 public class PrimeTerrain  : ICalculPrime { public decimal Calculer(Employe e) => 1500m; }
-public class PrimeStagiaire: ICalculPrime { public decimal Calculer(Employe e) => 0m; }
-
-// ServicePaie ne change pas quand on ajoute un nouveau type de prime :
-public class ServicePaie
-{
-    private readonly ICalculPrime _calcul;
-    public ServicePaie(ICalculPrime calcul) => _calcul = calcul;
-    public decimal GetPrime(Employe e) => _calcul.Calculer(e);
-}
+// Nouveau type → nouvelle classe, ServicePaie ne change pas
 ```
 
 ---
 
-### 7.3 L — Liskov Substitution Principle (LSP)
+### 7.3 L — Liskov Substitution Principle
 
-> **Une classe enfant doit pouvoir remplacer son parent sans rien casser.**
+**Théorie :** Si `B` hérite de `A`, alors partout où on utilise `A`, on doit pouvoir utiliser `B` **sans que le comportement attendu soit brisé**. Un enfant ne doit pas restreindre ou contredire le contrat de son parent.
 
-Si `Manager` hérite d'`Employe`, tout code qui fonctionne avec `Employe` doit fonctionner identiquement avec un `Manager`.
+C'est le principe qui garantit que l'héritage est utilisé de façon cohérente : une classe enfant est vraiment « un type de » son parent.
 
-**Violation classique (carré/rectangle) :**
+**Violation classique :**
 
 ```csharp
-public class Rectangle
-{
-    public virtual int Largeur  { get; set; }
-    public virtual int Hauteur  { get; set; }
-    public int Aire() => Largeur * Hauteur;
-}
-
+public class Rectangle { public virtual int Largeur { get; set; } public virtual int Hauteur { get; set; } }
 public class Carre : Rectangle
 {
-    // Un carré force Largeur == Hauteur → viole le contrat de Rectangle
-    public override int Largeur  { set { base.Largeur = base.Hauteur = value; } ... }
+    // Forcer Largeur == Hauteur viole le contrat de Rectangle
+    public override int Largeur { set { base.Largeur = base.Hauteur = value; } get => base.Largeur; }
 }
-```
 
-```csharp
 Rectangle r = new Carre();
-r.Largeur = 4;
-r.Hauteur = 5;
-Console.WriteLine(r.Aire()); // Attendu : 20 — Obtenu : 25 → comportement cassé
+r.Largeur = 4; r.Hauteur = 5;
+// Aire attendue : 20 — Aire obtenue : 25 → comportement cassé
 ```
 
-**Règle :** si l'héritage force à surcharger des méthodes pour restreindre ou modifier leur contrat, c'est une violation LSP. Préférer la composition ou des interfaces distinctes.
+**Règle pratique :** si l'héritage oblige à lancer des exceptions ou à restreindre le comportement parent, c'est souvent le signe d'une mauvaise hiérarchie. Préférer la composition.
 
 ---
 
-### 7.4 I — Interface Segregation Principle (ISP)
+### 7.4 I — Interface Segregation Principle
 
-> **Plusieurs interfaces spécifiques valent mieux qu'une interface fourre-tout.**
+**Théorie :** Une classe ne doit pas être forcée d'implémenter des méthodes qu'elle n'utilise pas. Mieux vaut plusieurs interfaces précises qu'une seule interface générale.
 
-Ne pas forcer une classe à implémenter des méthodes qu'elle n'utilise pas.
+Des interfaces trop larges créent des dépendances inutiles et forcent des implémentations vides ou levant des exceptions.
 
 **Violation :**
 
@@ -121,14 +106,13 @@ public interface IEntite
 {
     void Sauvegarder();
     void EnvoyerParEmail();
-    void Imprimer();
+    void Imprimer();          // Demande n'a pas besoin de ça
 }
 
-// Demande doit implémenter Imprimer() alors qu'elle n'est jamais imprimée
 public class Demande : IEntite
 {
-    public void Sauvegarder() { ... }
-    public void EnvoyerParEmail() { ... }
+    public void Sauvegarder()    { ... }
+    public void EnvoyerParEmail(){ ... }
     public void Imprimer() => throw new NotImplementedException(); // 🚩
 }
 ```
@@ -136,28 +120,27 @@ public class Demande : IEntite
 **Correction :**
 
 ```csharp
-public interface ISauvegardable  { void Sauvegarder(); }
+public interface ISauvegardable { void Sauvegarder(); }
 public interface IEnvoyable      { void EnvoyerParEmail(); }
 public interface IImprimable     { void Imprimer(); }
 
-public class Demande  : ISauvegardable, IEnvoyable { ... } // pas IImprimable
-public class Contrat  : ISauvegardable, IImprimable { ... }
+public class Demande : ISauvegardable, IEnvoyable { ... } // pas IImprimable
 ```
 
 ---
 
-### 7.5 D — Dependency Inversion Principle (DIP)
+### 7.5 D — Dependency Inversion Principle
 
-> **Dépendre d'abstractions (interfaces), pas d'implémentations concrètes.**
+**Théorie :** Les modules de haut niveau ne doivent pas dépendre des modules de bas niveau — les deux doivent dépendre d'**abstractions** (interfaces). Les détails d'implémentation dépendent des abstractions, pas l'inverse.
 
-C'est le principe au cœur de l'**injection de dépendances** d'ASP.NET Core.
+C'est le principe au cœur de l'**injection de dépendances** d'ASP.NET Core. En injectant une interface plutôt qu'une classe concrète, on rend le code testable (on peut substituer un faux service en test) et évolutif (changer l'implémentation sans toucher au code client).
 
 **Violation :**
 
 ```csharp
 public class ServiceConges
 {
-    // Dépend directement de la classe concrète → couplage fort, non testable
+    // Couplage fort à la classe concrète
     private readonly DemandeRepository _repo = new DemandeRepository();
 }
 ```
@@ -165,28 +148,15 @@ public class ServiceConges
 **Correction :**
 
 ```csharp
-public interface IDemandeRepository
-{
-    void Inserer(Demande d);
-    List<Demande> GetParSalarie(int id);
-}
+public interface IDemandeRepository { void Inserer(Demande d); }
 
 public class ServiceConges
 {
     private readonly IDemandeRepository _repo;
-    // Le constructeur reçoit l'abstraction, pas le concret
+    // Reçoit l'abstraction — peut recevoir un FakeRepository en test
     public ServiceConges(IDemandeRepository repo) => _repo = repo;
 }
 ```
-
-**Enregistrement dans `Program.cs` (ASP.NET Core) :**
-
-```csharp
-builder.Services.AddScoped<IDemandeRepository, DemandeRepository>();
-builder.Services.AddScoped<IServiceConges, ServiceConges>();
-```
-
-En test, on injecte un `FakeDemandeRepository` à la place — sans toucher à la BDD.
 
 ---
 
@@ -194,29 +164,12 @@ En test, on injecte un `FakeDemandeRepository` à la place — sans toucher à l
 
 Ces trois principes complètent SOLID au quotidien :
 
-| Principe | Signification | En pratique |
+| Principe | Signification | Anti-pattern à éviter |
 | --- | --- | --- |
-| **DRY** | *Don't Repeat Yourself* — une logique a une seule source de vérité | Extraire une méthode plutôt que copier-coller |
-| **KISS** | *Keep It Simple* — la solution la plus simple qui fonctionne | Éviter les abstractions prématurées |
-| **YAGNI** | *You Aren't Gonna Need It* — ne pas coder ce dont on n'a pas besoin | Ne pas créer de "généricité au cas où" |
-
-**DRY en pratique :**
-
-```csharp
-// ❌ Logique de calcul de durée dupliquée dans deux méthodes
-public bool EstValide(Demande d) {
-    int jours = (d.DateFin - d.DateDebut).Days + 1;
-    return jours <= solde;
-}
-public string Résumé(Demande d) {
-    int jours = (d.DateFin - d.DateDebut).Days + 1; // dupliqué
-    return $"{jours} jour(s)";
-}
-
-// ✅ Extraction
-private int NbJours(Demande d) => (d.DateFin - d.DateDebut).Days + 1;
-```
+| **DRY** — *Don't Repeat Yourself* | Une logique a une seule source de vérité | Copier-coller du code → si la règle change, on oublie de corriger partout |
+| **KISS** — *Keep It Simple* | La solution la plus simple qui fonctionne | Sur-engineering, abstractions prématurées |
+| **YAGNI** — *You Aren't Gonna Need It* | Ne pas coder ce dont on n'a pas encore besoin | Développer des fonctionnalités hypothétiques → dette technique |
 
 > **📌 À retenir**
 >
-> SOLID rend le code **testable** : SRP isole chaque responsabilité, DIP permet l'injection de faux. Un code difficile à tester est souvent le symptôme d'une violation de SRP ou DIP. Ces principes ne sont pas des règles rigides mais des outils pour réduire le couplage et augmenter la cohésion.
+> Un code qui respecte SOLID est presque toujours **plus facile à tester**. Si une classe est difficile à tester unitairement, c'est souvent le signe d'une violation de SRP (trop de responsabilités) ou de DIP (dépendances concrètes non injectables). La testabilité est un bon indicateur de qualité de conception.

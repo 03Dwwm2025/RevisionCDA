@@ -120,4 +120,113 @@ if (!res.ok) throw new Error(\`Erreur \${res.status}\`);`,
     explication:
       'CSRF : la victime, connectée sur `banque.fr`, visite `evil.com` qui déclenche `POST banque.fr/virement` — le navigateur envoie automatiquement les cookies. Parades : cookie `SameSite=Strict` (bloque l\'envoi cross-site) + token CSRF (valeur aléatoire dans le formulaire vérifiée côté serveur).',
   },
+
+  // --- JavaScript de base ---
+  {
+    id: 'front-009',
+    theme: 'front-end',
+    type: 'association',
+    difficulte: 1,
+    enonce: 'Associez chaque mot-clé JavaScript à son comportement pour déclarer une variable.',
+    paires: [
+      { gauche: '`let`', droite: 'Variable modifiable, portée au bloc `{}`' },
+      { gauche: '`const`', droite: 'Constante non réassignable, portée au bloc `{}`' },
+      { gauche: '`var`', droite: 'Ancienne syntaxe, portée à la fonction (à éviter)' },
+      { gauche: '`=>`', droite: 'Syntaxe de fonction fléchée (arrow function)' },
+    ],
+    explication:
+      'Préférer `const` par défaut, `let` quand la variable doit changer. Éviter `var` : sa portée function (et non bloc) est source de bugs. Les arrow functions `(a, b) => a + b` sont plus courtes et n\'ont pas leur propre `this`.',
+  },
+  {
+    id: 'front-010',
+    theme: 'front-end',
+    type: 'qcm',
+    difficulte: 1,
+    enonce: 'Quelle méthode JavaScript permet de sélectionner **tous** les éléments correspondant à un sélecteur CSS ?',
+    options: [
+      '`document.getElementById("btn")`',
+      '`document.querySelector(".btn")`',
+      '`document.querySelectorAll(".btn")`',
+      '`document.getElement(".btn")`',
+    ],
+    bonneReponse: 2,
+    explication:
+      '`getElementById` → un seul élément par id. `querySelector` → le premier élément correspondant. `querySelectorAll` → tous les éléments correspondant (retourne une NodeList). `getElement` n\'existe pas.',
+  },
+  {
+    id: 'front-011',
+    theme: 'front-end',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce: 'Utiliser `innerHTML` pour afficher des données saisies par l\'utilisateur peut créer une faille XSS.',
+    bonneReponse: true,
+    explication:
+      'Si on fait `div.innerHTML = saisieUtilisateur`, un utilisateur malveillant peut injecter `<script>alert("XSS")</script>`. Utiliser `textContent` à la place : il échappe automatiquement le HTML. `innerHTML` ne doit être utilisé qu\'avec du contenu maîtrisé et nettoyé.',
+  },
+
+  // --- Regex et validation ---
+  {
+    id: 'front-012',
+    theme: 'front-end',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Que fait cette expression régulière JavaScript : `/^[0-9]{5}$/` ?',
+    options: [
+      'Valide une chaîne contenant au moins 5 chiffres',
+      'Valide une chaîne composée d\'exactement 5 chiffres (code postal)',
+      'Remplace les 5 premiers chiffres d\'une chaîne',
+      'Teste si la chaîne commence par 5',
+    ],
+    bonneReponse: 1,
+    explication:
+      '`^` = début de chaîne, `[0-9]` = un chiffre, `{5}` = exactement 5 fois, `$` = fin de chaîne. La regex `/^[0-9]{5}$/` valide donc exactement 5 chiffres et rien d\'autre — parfait pour un code postal français. `regex.test("75001")` retourne `true`.',
+  },
+  {
+    id: 'front-013',
+    theme: 'front-end',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque symbole de regex à sa signification.',
+    paires: [
+      { gauche: '`^` et `$`', droite: 'Ancre de début et de fin de chaîne' },
+      { gauche: '`\\d`', droite: 'Un chiffre (équivalent à `[0-9]`)' },
+      { gauche: '`+`', droite: '1 ou plusieurs occurrences du caractère précédent' },
+      { gauche: '`{n,m}`', droite: 'Entre n et m occurrences' },
+    ],
+    explication:
+      'Les ancres `^` et `$` garantissent que toute la chaîne correspond (sans elles, la regex match n\'importe où dans la chaîne). `\\d+` = un ou plusieurs chiffres. `{8,20}` = entre 8 et 20 caractères (utile pour un mot de passe).',
+  },
+  {
+    id: 'front-014',
+    theme: 'front-end',
+    type: 'completer_code',
+    difficulte: 3,
+    enonce: 'Complétez cette validation de formulaire en JavaScript avec regex.',
+    codeAvecTrous: `const emailRegex = ___1___;
+const mdpRegex   = /^(?=.*[A-Z])(?=.*\\d).{8,}$/;
+
+function validerFormulaire(email, mdp) {
+  if (!emailRegex.___2___(email)) {
+    return "Email invalide";
+  }
+  if (!mdpRegex.test(mdp)) {
+    return "MDP : 8 car. min, 1 majuscule, 1 chiffre";
+  }
+  return ___3___;
+}`,
+    choix: [
+      '/^[\\w.+-]+@[\\w-]+\\.[a-z]{2,}$/i',
+      '/email/',
+      '/[a-z]+@[a-z]+/',
+      'test',
+      'match',
+      'exec',
+      'null',
+      '"ok"',
+      'true',
+    ],
+    bonnesReponses: ['/^[\\w.+-]+@[\\w-]+\\.[a-z]{2,}$/i', 'test', '"ok"'],
+    explication:
+      'La regex email valide la structure `user@domain.ext`. Le flag `i` rend la comparaison insensible à la casse. `.test(string)` retourne `true` ou `false`. La regex du MDP utilise des lookaheads `(?=...)` pour vérifier des conditions indépendantes (majuscule ET chiffre AND longueur ≥ 8).',
+  },
 ];

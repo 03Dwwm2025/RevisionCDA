@@ -124,4 +124,47 @@ export const questionsArchitecture: Question[] = [
     explication:
       'L\'entité `Salarie` peut contenir `hashMotDePasse`, `soldeConges`, `idManager`… On ne veut pas tout exposer en API. Le DTO `SalarieDto` ne contient que `nom` et `email`. Avantage : découple le schéma interne du contrat API, protège les données sensibles, permet des versions d\'API indépendantes.',
   },
+
+  // --- DTO, injection de dépendances ---
+  {
+    id: 'archi-009',
+    theme: 'architecture',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Pourquoi ne doit-on pas exposer directement l\'entité de la base de données dans la réponse de l\'API ?',
+    options: [
+      'Pour des raisons de performance uniquement',
+      'Parce que l\'entité peut contenir des champs sensibles (hash mot de passe, données internes) qu\'on ne veut pas exposer',
+      'Parce que les entités ne peuvent pas être sérialisées en JSON',
+      'C\'est une contrainte du framework ASP.NET Core',
+    ],
+    bonneReponse: 1,
+    explication:
+      'L\'entité `Salarie` contient potentiellement `hashMotDePasse`, `soldeConges`, `idManager`… On ne veut pas tout exposer. Le DTO (`SalarieReponseDto`) ne contient que `nom` et `email`. Autre avantage : si le schéma interne change, le contrat API reste stable.',
+  },
+  {
+    id: 'archi-010',
+    theme: 'architecture',
+    type: 'vrai_faux',
+    difficulte: 1,
+    enonce: 'Dans l\'architecture en couches, le Service (couche métier) peut faire des requêtes SQL directement, sans passer par le Repository.',
+    bonneReponse: false,
+    explication:
+      'Le Service ne connaît que le Repository (via une interface). Il ne fait jamais de SQL direct. Cette séparation permet de changer la BDD ou l\'ORM sans toucher au Service, et de tester le Service avec un faux Repository sans BDD réelle.',
+  },
+  {
+    id: 'archi-011',
+    theme: 'architecture',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque couche à ce qu\'elle NE doit PAS contenir.',
+    paires: [
+      { gauche: 'Controller', droite: 'Requêtes SQL ou logique métier complexe' },
+      { gauche: 'Service (Métier)', droite: 'Code HTTP (`HttpContext`, codes de statut)' },
+      { gauche: 'Repository', droite: 'Règles métier (validation du solde, chevauchement de dates)' },
+      { gauche: 'Vue / Front-end', droite: 'Logique de sécurité ou règles métier (côté client = non fiable)' },
+    ],
+    explication:
+      'Chaque couche doit rester dans son domaine. Un Controller qui fait du SQL est non testable. Un Service qui retourne des `IActionResult` est couplé à HTTP. Un Repository qui valide les règles métier les duplique. La Vue ne doit jamais être la seule ligne de défense.',
+  },
 ];

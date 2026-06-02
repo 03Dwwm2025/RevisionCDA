@@ -1,41 +1,134 @@
 ## 5. L'architecture logicielle
 
-L'architecture définit comment le code est **organisé en responsabilités séparées**. Une bonne architecture rend le code testable, maintenable et évolutif. La structure de référence du CDA est l'**architecture en couches**.
+L'architecture définit comment le code est **organisé en responsabilités séparées**. Une bonne architecture rend le code testable, maintenable et évolutif.
 
 ### 5.1 L'architecture en couches
 
-Chaque couche a une responsabilité unique et ne communique qu'avec ses voisines, du plus proche de l'utilisateur au plus proche des données :
+Chaque couche a une **responsabilité unique** et ne communique qu'avec ses voisines immédiates. On va du plus proche de l'utilisateur au plus proche des données :
 
-| Couche | Rôle |
+| Couche | Rôle | Ce qu'elle contient |
+| --- | --- | --- |
+| **View (Vue)** | Afficher les données, recueillir les actions de l'utilisateur | Pages HTML, composants UI |
+| **Controller** | Recevoir les requêtes, valider les données, déléguer au service | Endpoints API, validation du format |
+| **Business / Métier (Service)** | Contenir les règles métier de l'application | Vérification solde, règles de validation |
+| **Repository** | Centraliser les requêtes vers la base de données | Requêtes SQL paramétrées, ORM |
+| **BDD** | Stocker et persister les données | Tables SQL |
+| **Model** | Objets de données transportés entre les couches | Classes C# simples (entités, DTO) |
+| **Outils / Utils** | Fonctions utilitaires réutilisables partout | Helpers, formateurs de date, loggers |
+
+**Règle d'or : les dépendances vont vers le bas.**
+- Le Controller connaît le Service — jamais l'inverse.
+- Le Service connaît le Repository — jamais l'inverse.
+- La BDD ne « remonte » jamais directement jusqu'à la Vue.
+
+```
+View  ──►  Controller  ──►  Service  ──►  Repository  ──►  BDD
+                                                    ▲
+                              Model (transverse, utilisable partout)
+                              Utils  (transverse, utilisable partout)
+```
+
+---
+
+### 5.2 Pourquoi séparer en couches ?
+
+**Sans séparation :**
+```csharp
+// ❌ Tout dans le Controller — impossible à tester, à maintenir, à faire évoluer
+[HttpPost]
+public IActionResult Creer(DemandeDto dto)
+{
+    // Validation métier dans le controller
+    if (dto.Fin < dto.Debut) return BadRequest("Dates invalides");
+
+    // SQL directement dans le controller
+    using var conn = new SqlConnection(connectionString);
+    conn.Execute("INSERT INTO Demande VALUES (@debut, @fin, 42)", dto);
+
+    // Envoi d'e-mail dans le controller
+    SmtpClient.Send("manager@entreprise.fr", "Nouvelle demande");
+
+    return Ok();
+}
+```
+
+**Avec séparation :**
+```csharp
+// ✅ Controller : valide et délègue uniquement
+[HttpPost]
+public IActionResult Creer([FromBody] DemandeDto dto)
+{
+    if (!ModelState.IsValid) return BadRequest(ModelState);
+    var res = _serviceConges.Deposer(dto);
+    return res.Succes ? CreatedAtAction(...) : BadRequest(res.Message);
+}
+
+// ✅ Service : règles métier uniquement
+public Resultat Deposer(DemandeDto dto)
+{
+    if (dto.Fin < dto.Debut) return Resultat.Erreur("Dates invalides");
+    if (_repo.GetSolde(dto.IdSalarie) < dto.NbJours()) return Resultat.Erreur("Solde insuffisant");
+    _repo.Inserer(dto);
+    _notif.Envoyer(dto.IdSalarie);
+    return Resultat.Ok();
+}
+
+// ✅ Repository : accès données uniquement
+public void Inserer(DemandeDto dto)
+{
+    // requête SQL paramétrée
+}
+```
+
+---
+
+### 5.3 Le patron MVC
+
+**MVC** (*Model-View-Controller*) est une déclinaison très répandue de l'architecture en couches :
+
+| Composant | Rôle |
 | --- | --- |
-| **View** (Vue) | Permet les interactions avec l'utilisateur (affichage, formulaires) |
-| **Controller** | Contrôle, formate et vérifie l'intégrité, la pertinence et la bonne transmission des données |
-| **Business / Métier** | Communique avec le repository ; contient les algorithmes liés à l'usage de l'application |
-| **Repository** | Effectue les requêtes préparées / paramétrées vers la base |
-| **BDD** | La base de données, interrogée par le repository |
-| **Model** | Objets de données, utilisables partout (transverse) |
-| **Outils / Utils** | Couche d'utilitaires disponible un peu partout (transverse) |
+| **Model** | Les données et la logique métier |
+| **View** | La présentation (ce que voit l'utilisateur) |
+| **Controller** | Reçoit les actions, sollicite le Model, choisit la View |
 
-Le flux d'une requête traverse les couches : **View → Controller → Business → Repository → BDD**, puis remonte. Le **Model** et les **Outils** sont transverses (accessibles depuis plusieurs couches).
+**Flux dans MVC :**
+```
+Utilisateur → action → Controller
+                           │
+                     sollicite Model
+                           │
+                     choisit View → affiche à l'utilisateur
+```
 
-### 5.2 Le patron MVC
+L'intérêt : on peut changer la Vue (passer d'un site web à une appli mobile) **sans toucher au Model**. On peut tester le Model **sans interface**.
 
-**MVC** (Model-View-Controller) est une déclinaison très répandue de cette séparation :
+---
 
-- **Model** : les données et la logique métier.
-- **View** : la présentation (ce que voit l'utilisateur).
-- **Controller** : reçoit les actions de l'utilisateur, sollicite le Model, choisit la View à renvoyer.
+### 5.4 Architecture n-tiers et client-serveur
 
-L'intérêt : on peut changer la vue (web, mobile) sans toucher au métier, et tester le métier sans interface.
+Sur le plan déploiement, on parle d'architecture **3-tiers** :
 
-### 5.3 Architectures n-tiers et client-serveur
+```
+┌──────────────┐      HTTP/HTTPS      ┌──────────────────┐      SQL      ┌──────────┐
+│   Client     │ ──────────────────► │   Serveur API     │ ────────────► │   BDD    │
+│ (navigateur) │ ◄────────────────── │  (ASP.NET Core)   │ ◄──────────── │ (SQL Srv)│
+└──────────────┘     JSON            └──────────────────┘               └──────────┘
+     Tier 1               Tier 2 (applicatif)                 Tier 3 (données)
+```
 
-Sur le plan déploiement, on parle d'architecture **3-tiers** : un client (navigateur), un serveur applicatif (l'API/le back) et un serveur de données (la BDD), souvent sur des machines distinctes. C'est le modèle de CongeApp : un front React appelle une API ASP.NET Core qui interroge une base SQL.
+- **Tier 1** : le client (navigateur, appli mobile) — affiche et interagit
+- **Tier 2** : le serveur applicatif (l'API) — logique métier
+- **Tier 3** : le serveur de données (BDD) — stockage
+
+La BDD n'est **jamais exposée directement sur Internet** : elle n'est accessible que par le serveur applicatif, sur le réseau interne.
+
+---
 
 > **🔒 Sécurité**
 >
-> L'architecture en couches est elle-même un dispositif de sécurité (**défense en profondeur**).
-> - **Valider à chaque couche** : ne jamais faire confiance aux données reçues de la couche au-dessus. La validation côté client (View) est pour le confort ; la vraie validation se fait côté serveur (Controller + Business).
-> - Le **Repository** isole l'accès aux données et **centralise les requêtes paramétrées** : c'est le bon endroit pour empêcher les injections SQL.
-> - **Cloisonnement** : une faille dans une couche ne doit pas compromettre tout le système. Le serveur de données n'est jamais exposé directement à Internet.
-> - Appliquer le **moindre privilège** : le compte applicatif qui accède à la BDD n'a que les droits nécessaires (pas de DROP TABLE…).
+> L'architecture en couches est en elle-même un dispositif de sécurité (**défense en profondeur**) :
+> - **Valider à chaque couche** : la validation côté View est du confort UX, la validation côté Controller/Service est la vraie sécurité.
+> - Le **Repository** isole l'accès aux données et centralise les requêtes paramétrées — c'est là qu'on empêche les injections SQL.
+> - **Cloisonnement** : une faille dans une couche ne doit pas compromettre tout le système.
+> - Le serveur de données n'est **jamais exposé directement à Internet**.

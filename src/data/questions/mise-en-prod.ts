@@ -124,4 +124,63 @@ export const questionsMiseEnProd: Question[] = [
     explication:
       '`EXPOSE` est documentaire, il n\'ouvre pas de port sur l\'hôte. `ports: "5432:5432"` l\'ouvrirait → accessible depuis Internet. Sans `ports:`, le service db communique uniquement via le réseau interne Docker (réseau bridge privé). L\'API accède à la BDD via son nom de service (`db:5432`), pas via l\'hôte.',
   },
+
+  // --- DNS, SSH, UFW ---
+  {
+    id: 'prod-009',
+    theme: 'mise-en-prod',
+    type: 'association',
+    difficulte: 1,
+    enonce: 'Associez chaque type d\'enregistrement DNS à son rôle.',
+    paires: [
+      { gauche: 'Enregistrement A', droite: 'Fait pointer un domaine vers une adresse IPv4' },
+      { gauche: 'Enregistrement AAAA', droite: 'Fait pointer un domaine vers une adresse IPv6' },
+      { gauche: 'Enregistrement CNAME', droite: 'Alias — fait pointer un nom vers un autre nom de domaine' },
+      { gauche: 'Enregistrement MX', droite: 'Désigne le serveur de messagerie du domaine' },
+    ],
+    explication:
+      'Pour pointer `mon-app.fr` vers un VPS avec IP `45.155.171.34`, on crée un enregistrement A : `mon-app.fr → 45.155.171.34`. Pour `www`, on peut créer un CNAME : `www → mon-app.fr`. La propagation DNS peut prendre de quelques minutes à 24h.',
+  },
+  {
+    id: 'prod-010',
+    theme: 'mise-en-prod',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Quelle commande UFW bloque tout le trafic entrant par défaut, tout en autorisant SSH, HTTP et HTTPS ?',
+    options: [
+      '`ufw allow all && ufw deny ssh`',
+      '`ufw default deny incoming && ufw allow 22 && ufw allow 80 && ufw allow 443 && ufw enable`',
+      '`ufw block all && ufw open 22 80 443`',
+      '`iptables -A INPUT -p tcp --dport 80 -j ACCEPT`',
+    ],
+    bonneReponse: 1,
+    explication:
+      'La séquence correcte : d\'abord `default deny incoming` (bloquer tout), puis ouvrir uniquement les ports nécessaires (22/SSH, 80/HTTP, 443/HTTPS), enfin `ufw enable`. **Attention :** ne pas oublier d\'autoriser le port 22 avant d\'activer UFW, sinon on se coupe l\'accès SSH.',
+  },
+  {
+    id: 'prod-011',
+    theme: 'mise-en-prod',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce: 'L\'authentification SSH par clé est plus sécurisée que l\'authentification par mot de passe car une clé privée ne peut pas être devinée par brute force.',
+    bonneReponse: true,
+    explication:
+      'Une clé SSH Ed25519 est cryptographiquement impossible à brute-forcer (256 bits d\'entropie). Un mot de passe, même complexe, peut être testé des milliers de fois par seconde. Bonne pratique : générer une paire de clés (`ssh-keygen -t ed25519`), copier la clé publique sur le serveur, désactiver `PasswordAuthentication` dans `/etc/ssh/sshd_config`.',
+  },
+  {
+    id: 'prod-012',
+    theme: 'mise-en-prod',
+    type: 'qcm',
+    difficulte: 3,
+    enonce: 'Pourquoi doit-on **désactiver** `PermitRootLogin` dans la configuration SSH du VPS ?',
+    options: [
+      'Pour économiser des ressources serveur',
+      'Pour empêcher les connexions directes en root : si un attaquant passe SSH, il a les pleins pouvoirs — mieux vaut forcer le passage par un utilisateur dédié + sudo',
+      'Parce que root n\'a pas accès à Docker',
+      'Pour respecter les contraintes de Let\'s Encrypt',
+    ],
+    bonneReponse: 1,
+    explication:
+      'Root est le compte le plus ciblé par les attaques SSH. Le désactiver force à se connecter avec un compte utilisateur puis à `sudo` pour les actions privilégiées. Cela crée une étape supplémentaire que l\'attaquant doit franchir et génère des logs traçables des actions d\'administration.',
+  },
 ];

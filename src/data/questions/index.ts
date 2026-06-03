@@ -37,6 +37,7 @@ export const SLUG_TO_THEME: Record<string, Theme> = {
   '04-1-l-analyse-des-besoins': 'conception',
   '05-2-la-modelisation-des-donnees': 'conception',
   '06-3-la-modelisation-uml': 'conception',
+  '07-4-le-maquettage-ui-ux': 'conception',
   '10-6-la-programmation-orientee-objet-poo': 'poo',
   '11-7-les-principes-de-conception-solid-co': 'solid',
   '12-8-l-architecture-en-couches-en-pratique': 'architecture',

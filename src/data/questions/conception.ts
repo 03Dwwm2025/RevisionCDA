@@ -232,6 +232,217 @@ CREATE TABLE Demande (
       'Planning (début) → Dailys (pendant) → Review (fin, démonstration) → Rétro (fin, amélioration interne). La Review est tournée vers le produit et le client ; la Rétro est tournée vers le fonctionnement de l\'équipe.',
   },
 
+  // --- Maquettage UI/UX ---
+  {
+    id: 'concep-017',
+    theme: 'conception',
+    type: 'association',
+    difficulte: 1,
+    enonce: 'Associez chaque étape du maquettage à son rôle.',
+    paires: [
+      { gauche: 'Zoning', droite: 'Découper la page en grandes zones fonctionnelles sans détail ni texte' },
+      { gauche: 'Wireframe', droite: 'Placer les vrais éléments (boutons, champs, titres) sans couleur ni style' },
+      { gauche: 'Mockup', droite: 'Ajouter couleurs, typographie et images pour valider le rendu visuel' },
+      { gauche: 'Prototype', droite: 'Rendre le mockup cliquable pour simuler la navigation sans coder' },
+    ],
+    explication:
+      'Le maquettage progresse du plus abstrait (zoning) au plus concret (prototype). Chaque étape a un rôle précis. Montrer un mockup couleurs trop tôt focalise le client sur les couleurs plutôt que sur la logique de navigation.',
+  },
+  {
+    id: 'concep-018',
+    theme: 'conception',
+    type: 'remettre_ordre',
+    difficulte: 1,
+    enonce: 'Remettez dans l\'ordre les étapes de création d\'une maquette (de la plus abstraite à la plus concrète).',
+    elements: [
+      'Zoning — blocs grossiers, structure générale de la page',
+      'Wireframe — filaire N&B, placement des éléments sans style',
+      'Mockup — couleurs, typographie, images, validation visuelle',
+      'Prototype — cliquable, navigation simulée, test des interactions',
+    ],
+    explication:
+      'L\'ordre est imposé par la logique de conception : on valide la structure avant le style, et le style avant les interactions. Inverser cet ordre conduit à refaire du travail (ex. changer la navigation dans un prototype coûte plus cher que dans un wireframe).',
+  },
+  {
+    id: 'concep-019',
+    theme: 'conception',
+    type: 'vrai_faux',
+    difficulte: 1,
+    enonce: 'Un wireframe doit utiliser les vraies couleurs et la vraie typographie pour que le client puisse valider le rendu visuel.',
+    bonneReponse: false,
+    explication:
+      'Le wireframe est volontairement en noir et blanc, sans style. L\'objectif est de valider la structure et la hiérarchie de l\'information sans que le client soit distrait par les couleurs. La validation visuelle est le rôle du mockup, à l\'étape suivante.',
+  },
+  {
+    id: 'concep-020',
+    theme: 'conception',
+    type: 'qcm',
+    difficulte: 1,
+    enonce: 'Quelle est la différence fondamentale entre **UI** et **UX** ?',
+    options: [
+      'L\'UI concerne les applications mobiles, l\'UX les applications web',
+      'L\'UI est ce qu\'on voit (couleurs, typographie, mise en page) ; l\'UX est ce qu\'on ressent (facilité d\'utilisation, satisfaction)',
+      'L\'UI est conçu par le développeur front-end ; l\'UX est conçu par le chef de projet',
+      'Il n\'y a pas de différence : UI et UX sont deux termes synonymes',
+    ],
+    bonneReponse: 1,
+    explication:
+      'UI = User Interface : le travail graphique (ce qu\'on voit). UX = User eXperience : l\'expérience globale de l\'utilisateur (ce qu\'on ressent). Une belle UI avec une mauvaise UX reste une mauvaise application. Exemple : une app peut être graphiquement soignée mais impossible à utiliser si on ne trouve pas les boutons.',
+  },
+  {
+    id: 'concep-021',
+    theme: 'conception',
+    type: 'association',
+    difficulte: 1,
+    enonce: 'Associez chaque principe UX à son exemple concret.',
+    paires: [
+      { gauche: 'Cohérence', droite: 'Le bouton "Valider" est violet partout dans l\'app, jamais vert ni rouge' },
+      { gauche: 'Retour visuel (feedback)', droite: 'Un loader s\'affiche pendant l\'envoi du formulaire pour éviter le double-clic' },
+      { gauche: 'Prévention des erreurs', droite: 'Le bouton "Valider" est désactivé tant que les dates ne sont pas cohérentes' },
+      { gauche: 'Affordance', droite: 'Un bouton a un relief et une couleur distincte pour avoir l\'air cliquable' },
+    ],
+    explication:
+      'Ces principes s\'appliquent dès la maquette. La cohérence évite la surprise. Le feedback rassure. La prévention vaut mieux que le message d\'erreur. L\'affordance guide sans instruction : l\'utilisateur sait instinctivement ce qui est cliquable.',
+  },
+  {
+    id: 'concep-022',
+    theme: 'conception',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Parmi les critères WCAG/RGAA suivants, lequel concerne le **ratio de contraste** du texte normal ?',
+    options: [
+      'Le texte doit avoir un ratio de contraste ≥ 3:1 par rapport au fond',
+      'Le texte doit avoir un ratio de contraste ≥ 4,5:1 par rapport au fond',
+      'Le texte doit avoir un ratio de contraste ≥ 7:1 par rapport au fond',
+      'Aucune règle chiffrée : c\'est au designer de juger',
+    ],
+    bonneReponse: 1,
+    explication:
+      'WCAG 2.1 niveau AA exige un ratio ≥ 4,5:1 pour le texte normal et ≥ 3:1 pour le texte grand (≥ 18pt). Un texte gris clair sur fond blanc est souvent insuffisant. Des outils comme le "Colour Contrast Analyser" ou Figma permettent de vérifier ce ratio dès la maquette.',
+  },
+  {
+    id: 'concep-023',
+    theme: 'conception',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce: 'Le RGAA (Référentiel Général d\'Amélioration de l\'Accessibilité) est obligatoire pour **tous** les sites web en France.',
+    bonneReponse: false,
+    explication:
+      'Le RGAA est obligatoire pour les organismes publics (État, collectivités, certains organismes parapublics) et fortement recommandé pour tous les autres. Il est basé sur les WCAG du W3C. L\'ignorer dans un projet public expose à des sanctions. Dans un projet privé, c\'est une bonne pratique et un avantage concurrentiel.',
+  },
+  {
+    id: 'concep-024',
+    theme: 'conception',
+    type: 'completer_code',
+    difficulte: 2,
+    enonce: 'Complétez ce HTML pour qu\'il respecte les critères d\'accessibilité WCAG (association label/champ et alternative textuelle).',
+    codeAvecTrous: `<form>
+  <!-- Champ de formulaire accessible -->
+  <___1___ ___2___="dateDebut">Date de début</___1___>
+  <input type="date" id="dateDebut" required>
+
+  <!-- Image porteuse d'information accessible -->
+  <img src="check.svg" ___3___="Demande validée">
+</form>`,
+    choix: ['label', 'span', 'div', 'for', 'name', 'class', 'alt', 'title', 'aria-label'],
+    bonnesReponses: ['label', 'for', 'alt'],
+    explication:
+      '`<label for="dateDebut">` lie le label à l\'input via l\'`id`. Un lecteur d\'écran annoncera "Date de début" quand le champ est focalisé. `alt="Demande validée"` donne une alternative textuelle à l\'image. Un `<span>` ou `<div>` cliquable n\'est pas accessible au clavier — toujours préférer `<button>` ou `<label>`.',
+  },
+  {
+    id: 'concep-025',
+    theme: 'conception',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque heuristique de Nielsen à son exemple d\'application concrète.',
+    paires: [
+      { gauche: 'Visibilité du statut système', droite: 'Un loader et "Envoi en cours…" s\'affichent pendant la soumission d\'un formulaire' },
+      { gauche: 'Liberté et contrôle utilisateur', droite: 'Un bouton "Annuler" et un raccourci CTRL+Z permettent de revenir en arrière' },
+      { gauche: 'Aider à diagnostiquer les erreurs', droite: 'Le message indique "Les dates se chevauchent avec la demande du 01/07" plutôt que "Erreur 422"' },
+      { gauche: 'Reconnaissance > mémorisation', droite: 'Un menu déroulant liste les statuts possibles plutôt que de forcer la saisie libre' },
+    ],
+    explication:
+      'Les 10 heuristiques de Nielsen sont une grille d\'évaluation d\'interface. Une évaluation heuristique est réalisée par un expert (pas par de vrais utilisateurs). Elle identifie les violations et les classe par sévérité. C\'est une méthode rapide et peu coûteuse avant un test utilisateur.',
+  },
+  {
+    id: 'concep-026',
+    theme: 'conception',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Quel est le rôle principal d\'un **persona** dans la conception d\'une interface ?',
+    options: [
+      'Définir la charte graphique (couleurs, typographie) de l\'application',
+      'Représenter un profil utilisateur fictif mais réaliste pour guider les choix de conception et arbitrer les dilemmes d\'UX',
+      'Lister les fonctionnalités à développer par ordre de priorité',
+      'Décrire techniquement les flux de données entre les composants',
+    ],
+    bonneReponse: 1,
+    explication:
+      'Un persona est construit à partir d\'interviews et d\'observations réelles. Il représente un type d\'utilisateur avec ses objectifs, ses frustrations et ses habitudes. Quand on hésite entre deux choix d\'interface, on se demande "que ferait Marie dans cette situation ?". Un projet peut avoir 2-3 personas avec des besoins antagonistes à équilibrer.',
+  },
+  {
+    id: 'concep-027',
+    theme: 'conception',
+    type: 'remettre_ordre',
+    difficulte: 2,
+    enonce: 'Remettez dans l\'ordre les niveaux de l\'Atomic Design (du plus simple au plus complexe).',
+    elements: [
+      'Atomes — éléments irréductibles (bouton, icône, champ)',
+      'Molécules — combinaison d\'atomes (champ de recherche = input + bouton)',
+      'Organismes — combinaison de molécules (header = logo + nav + avatar)',
+      'Templates — structure de page (layout avec sidebar + zone contenu)',
+      'Pages — template avec données réelles (la vraie page "Mes demandes")',
+    ],
+    explication:
+      'Brad Frost a défini l\'Atomic Design pour structurer les design systems. L\'intérêt : les composants code React/Vue mappent directement sur ces niveaux. Les atomes sont les CSS tokens (couleur, espacement). Les molécules et organismes sont les composants réutilisables. Les templates guident le layout. Les pages sont l\'assemblage final.',
+  },
+  {
+    id: 'concep-028',
+    theme: 'conception',
+    type: 'completer_code',
+    difficulte: 2,
+    enonce: 'Complétez ce HTML Tailwind pour rendre la sidebar responsive : cachée sur mobile, visible à partir de `md`, et le bouton hamburger visible uniquement sur mobile.',
+    codeAvecTrous: `<!-- Sidebar : cachée sur mobile, affichée en bloc à partir de md -->
+<aside class="___1___ md:block w-64 bg-gray-100 p-4">
+  Navigation
+</aside>
+
+<!-- Bouton hamburger : visible sur mobile, caché à partir de md -->
+<button class="block ___2___ p-2">
+  ☰ Menu
+</button>`,
+    choix: ['hidden', 'flex', 'block', 'md:hidden', 'md:block', 'invisible', 'w-full', 'md:flex'],
+    bonnesReponses: ['hidden', 'md:hidden'],
+    explication:
+      'En mobile-first Tailwind, la classe de base s\'applique à tous les écrans, le préfixe `md:` s\'applique à partir de 768px. `hidden` = `display: none` par défaut. `md:block` = `display: block` à partir de md. Le bouton hamburger fait l\'inverse : visible par défaut (`block`), caché à partir de md (`md:hidden`).',
+  },
+  {
+    id: 'concep-029',
+    theme: 'conception',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Pourquoi l\'approche **mobile-first** est-elle recommandée pour le responsive design ?',
+    options: [
+      'Parce que les applications mobiles se vendent mieux que les applications web desktop',
+      'Parce que contraindre la conception au petit écran d\'abord force à prioriser l\'essentiel, puis à enrichir progressivement pour les grands écrans',
+      'Parce que le CSS ne peut pas gérer les grands écrans sans l\'approche mobile-first',
+      'Parce que les frameworks CSS modernes ne supportent que le mobile-first',
+    ],
+    bonneReponse: 1,
+    explication:
+      'Le petit écran est la contrainte la plus forte : peu de place, navigation tactile, connexion parfois lente. En partant du mobile, on identifie l\'essentiel et on ajoute des fonctionnalités pour les écrans plus grands. L\'inverse (desktop-first) aboutit souvent à des interfaces mobiles surchargées où on a "caché" des éléments plutôt que les avoir supprimés.',
+  },
+  {
+    id: 'concep-030',
+    theme: 'conception',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce: 'Sur mobile, une cible tactile (bouton, lien) de **16 × 16 px** est suffisante pour garantir une bonne expérience utilisateur.',
+    bonneReponse: false,
+    explication:
+      'La recommandation Apple et Google est une cible minimale de **44 × 44 px**. Un lien texte de 12px est cliquable sur desktop mais quasiment impossible à toucher sans erreur sur mobile. Le maquettage mobile doit anticiper cette contrainte : les boutons et liens doivent avoir une zone de frappe suffisante, même si l\'icône visible est plus petite.',
+  },
+
   // --- ACID dans la modélisation des données ---
   {
     id: 'concep-016',

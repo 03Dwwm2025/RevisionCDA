@@ -170,6 +170,60 @@ Ces trois principes complètent SOLID au quotidien :
 | **KISS** — *Keep It Simple* | La solution la plus simple qui fonctionne | Sur-engineering, abstractions prématurées |
 | **YAGNI** — *You Aren't Gonna Need It* | Ne pas coder ce dont on n'a pas encore besoin | Développer des fonctionnalités hypothétiques → dette technique |
 
+### 7.7 SOLID et la testabilité — le lien concret
+
+Respecter SOLID rend le code **naturellement testable**. Les mêmes qualités qui facilitent les tests (isolation, dépendances explicites, responsabilité claire) sont celles que SOLID cherche à atteindre.
+
+**Code qui viole SRP et DIP → impossible à tester sans infrastructure réelle :**
+
+```csharp
+// ❌ Pour tester Deposer(), il faut une vraie BDD et un vrai serveur SMTP
+public class ServiceConges
+{
+    public Resultat Deposer(DemandeDto dto)
+    {
+        var repo = new DemandeRepository("Server=prod;...");  // concrète, non injectable
+        repo.Inserer(dto);
+        new SmtpClient("smtp.gmail.com").Send(...);           // 2ème responsabilité
+        return Resultat.Ok();
+    }
+}
+```
+
+**Même code respectant SOLID → testable avec de simples faux :**
+
+```csharp
+// ✅ Les dépendances sont des interfaces injectables
+public class ServiceConges
+{
+    private readonly IDemandeRepository   _repo;
+    private readonly IServiceNotification _notif;
+    public ServiceConges(IDemandeRepository repo, IServiceNotification notif)
+        => (_repo, _notif) = (repo, notif);
+
+    public Resultat Deposer(DemandeDto dto)
+    {
+        _repo.Inserer(dto);
+        _notif.Envoyer("manager@co.fr", "Nouvelle demande");
+        return Resultat.Ok();
+    }
+}
+
+// Test : aucune BDD ni SMTP nécessaire
+[Fact]
+public void Deposer_InsereEtNotifie()
+{
+    var fakeRepo  = new FakeDemandeRepository();
+    var fakeNotif = new FakeNotification();
+    var service   = new ServiceConges(fakeRepo, fakeNotif);
+    service.Deposer(new DemandeDto { ... });
+    Assert.Single(fakeRepo.DemandesInserées);
+    Assert.True(fakeNotif.EmailEnvoyé);
+}
+```
+
+**La règle pratique :** si une classe est difficile à tester, c'est presque toujours une violation de DIP (dépendances créées en interne) ou de SRP (trop de responsabilités mélangées).
+
 > **📌 À retenir**
 >
-> Un code qui respecte SOLID est presque toujours **plus facile à tester**. Si une classe est difficile à tester unitairement, c'est souvent le signe d'une violation de SRP (trop de responsabilités) ou de DIP (dépendances concrètes non injectables). La testabilité est un bon indicateur de qualité de conception.
+> SOLID n'est pas une liste de règles rigides à respecter mécaniquement. C'est un ensemble de guides pour **réduire le couplage** et **augmenter la cohésion**. Un code difficile à tester est le signal le plus fiable qu'un principe est violé.

@@ -105,7 +105,48 @@ L'intérêt : on peut changer la Vue (passer d'un site web à une appli mobile) 
 
 ---
 
-### 5.4 Architecture n-tiers et client-serveur
+### 5.4 L'injection de dépendances — comment les couches se connectent
+
+On a vu que le Controller connaît le Service, et le Service connaît le Repository. Mais concrètement, **comment le Controller reçoit-il le Service** ? Et comment peut-on changer l'implémentation sans tout modifier ?
+
+La réponse est l'**injection de dépendances** (*Dependency Injection*) : plutôt que de créer les dépendances lui-même (`new ServiceConges()`), chaque composant les **reçoit dans son constructeur**. Le framework (ASP.NET Core) s'occupe de les fournir automatiquement.
+
+```csharp
+// ← Le Controller ne crée pas le Service — il le reçoit
+public class DemandesController : ControllerBase
+{
+    private readonly IServiceConges _service;
+
+    public DemandesController(IServiceConges service) // ← injection ici
+    {
+        _service = service;
+    }
+}
+
+// ← Le Service reçoit le Repository de la même façon
+public class ServiceConges
+{
+    private readonly IDemandeRepository _repo;
+
+    public ServiceConges(IDemandeRepository repo) // ← injection ici
+    {
+        _repo = repo;
+    }
+}
+
+// ← On configure une seule fois : "quand quelqu'un demande IServiceConges, donne-lui ServiceConges"
+builder.Services.AddScoped<IServiceConges, ServiceConges>();
+builder.Services.AddScoped<IDemandeRepository, DemandeRepository>();
+```
+
+**Avantages :**
+- En test, on peut injecter un faux service (`FakeDemandeRepository`) sans toucher au code
+- Si on change d'implémentation (autre BDD, autre service), on ne modifie qu'une ligne dans la configuration
+- Le code est plus lisible : chaque classe déclare explicitement ce dont elle a besoin
+
+---
+
+### 5.5 Architecture n-tiers et client-serveur
 
 Sur le plan déploiement, on parle d'architecture **3-tiers** :
 

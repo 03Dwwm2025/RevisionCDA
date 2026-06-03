@@ -85,21 +85,45 @@ git push origin feature/valider-demande
 
 ### 12.4 Merge vs Rebase
 
-| | `git merge` | `git rebase` |
-| --- | --- | --- |
-| **Résultat** | Commit de fusion, historique fidèle | Historique linéaire, commits rejoués |
-| **Quand** | PRs publiques, branches partagées | Nettoyer sa branche locale avant PR |
-| **Risque** | Merge commits peuvent "polluer" le log | Ne jamais rebaser une branche partagée |
+**`git merge`** fusionne deux branches en créant un **commit de fusion** qui a deux parents. L'historique garde la trace de toutes les branches — fidèle mais parfois chargé.
+
+**`git rebase`** **rejoue** tes commits un par un par-dessus la branche cible. L'historique devient linéaire, comme si tu avais développé directement sur la branche cible depuis le début.
+
+**Exemple visuel :**
+
+```
+Avant (tu as travaillé sur feature pendant que main avançait) :
+
+main    :  A ── B ── C
+                      \
+feature :               D ── E
+
+Après git merge main :                 Après git rebase main :
+
+main    :  A ── B ── C                 main    :  A ── B ── C
+                      \                                       \
+feature :               D ── E ── M   feature :               D' ── E'
+                               ↑                              (commits rejoués)
+                         commit de fusion
+```
+
+Avec `merge`, M montre explicitement qu'il y a eu une fusion. Avec `rebase`, l'historique est propre et linéaire.
 
 ```bash
-# Merge — crée un commit de fusion
+# Merge — crée un commit de fusion, préserve l'historique des branches
 git merge feature/depot-demande
 
-# Rebase — rejoue les commits sur main (historique linéaire)
+# Rebase — rejoue les commits sur la base de main
 git rebase main
 ```
 
-> ⚠️ **Règle d'or :** ne jamais faire `git rebase` sur une branche que d'autres personnes utilisent. Cela réécrit l'historique et crée des conflits pour tout le monde.
+| | `git merge` | `git rebase` |
+| --- | --- | --- |
+| **Historique** | Fidèle avec commit de fusion | Linéaire, plus lisible |
+| **Quand** | Fusion finale via PR, branches partagées | Nettoyer sa branche locale avant de soumettre une PR |
+| **Risque** | Merge commits | Réécrit l'historique — **interdit sur les branches partagées** |
+
+> ⚠️ **Règle d'or :** ne jamais `git rebase` une branche que d'autres personnes utilisent. Réécrire l'historique oblige tout le monde à re-synchroniser — source de conflits importants.
 
 ---
 

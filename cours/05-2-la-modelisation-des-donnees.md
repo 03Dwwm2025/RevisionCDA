@@ -2,6 +2,13 @@
 
 Les données sont le cœur d'une application de gestion. On les modélise par raffinements successifs : **dictionnaire de données → MCD → MLD → MPD**, du plus conceptuel au plus physique.
 
+```
+Dictionnaire    →     MCD      →     MLD      →     MPD
+(inventaire)       (métier,       (tables et      (SQL prêt
+                   pas de tech)    clés, pas       à créer)
+                                   de SGBD)
+```
+
 ### 2.1 Le dictionnaire de données
 
 C'est l'inventaire exhaustif et normalisé de toutes les informations manipulées par l'application. Il liste chaque donnée avec son nom, son type, ses contraintes et ses règles éventuelles.
@@ -21,11 +28,12 @@ C'est l'inventaire exhaustif et normalisé de toutes les informations manipulée
 
 ### 2.2 Le MCD — Modèle Conceptuel de Données
 
-Issu de la méthode **Merise**, le MCD décrit les données et leurs liens de façon **indépendante de toute technologie**. Ses éléments :
+Issu de la méthode **Merise**, le MCD décrit les données et leurs liens de façon **indépendante de toute technologie**. On pense « métier », pas « base de données ».
 
+Ses éléments :
 - **Entité** : un objet du métier (Salarié, Demande, Service). Elle possède des **attributs** et un **identifiant** unique.
 - **Association** : un lien entre entités (un Salarié *dépose* une Demande).
-- **Cardinalités** : sur chaque patte de l'association, un couple (min, max) indiquant la participation.
+- **Cardinalités** : sur chaque patte de l'association, un couple (min, max) indiquant combien de fois une entité participe au lien.
 
 | Cardinalité | Lecture |
 | --- | --- |
@@ -34,35 +42,63 @@ Issu de la méthode **Merise**, le MCD décrit les données et leurs liens de fa
 | (0,n) | participe de zéro à plusieurs fois |
 | (1,n) | participe d'une à plusieurs fois |
 
-**Exemple :** un Salarié dépose **(0,n)** demandes ; une Demande est déposée par **(1,1)** salarié → relation **un-à-plusieurs**.
+**Exemple CongeApp :**
+
+```
+SALARIE ——(0,n)——[ dépose ]——(1,1)—— DEMANDE
+```
+
+Lecture : un salarié peut déposer de 0 à plusieurs demandes. Chaque demande est déposée par exactement 1 salarié. → Relation **un-à-plusieurs** (one-to-many).
 
 ---
 
 ### 2.3 Le MLD — Modèle Logique de Données
 
-Étape intermédiaire qui traduit le MCD en tables, relations et clés, **sans choisir de SGBD précis**. On applique les règles de passage :
+Le MLD **traduit le MCD en tables et relations** sans encore choisir de SGBD précis. C'est l'étape intermédiaire entre la vision métier (MCD) et le SQL réel (MPD).
 
-- Chaque entité → une table
-- Chaque association one-to-many → une clé étrangère dans la table « faible »
-- Chaque association many-to-many → une table de liaison
+**Règles de passage MCD → MLD :**
+
+| Dans le MCD | Dans le MLD |
+| --- | --- |
+| Entité | Table |
+| Attribut | Colonne |
+| Identifiant | Clé primaire (PK) |
+| Association one-to-many | Clé étrangère (FK) dans la table "côté many" |
+| Association many-to-many | Nouvelle table de liaison avec les deux FK comme PK |
+
+**Exemple — MLD de CongeApp (notation textuelle) :**
+
+```
+Salarie (idSalarie, nom, email, soldeConges, #idService)
+          ↑ PK                                ↑ FK vers Service
+
+Demande (idDemande, dateDebut, dateFin, statut, #idSalarie)
+          ↑ PK                                   ↑ FK vers Salarie
+
+Service (idService, nomService)
+          ↑ PK
+```
+
+Lecture : le `#` indique une clé étrangère. La table `Demande` porte la FK `idSalarie` car c'est elle qui est du côté "many" (une demande appartient à UN salarié).
 
 ---
 
 ### 2.4 Le MPD — Modèle Physique de Données
 
-Le MPD est le schéma SQL final, prêt à être exécuté dans le SGBD choisi.
-
-**Règles de passage MCD → MPD :**
-- Les entités deviennent des **tables**, leurs attributs des **colonnes**.
-- Les identifiants deviennent des **clés primaires** (PRIMARY KEY).
-- Les associations disparaissent au profit de **clés étrangères** (FOREIGN KEY).
-- Dans une relation **many-to-many**, l'association génère une **table de liaison** dont la PK est la concaténation des deux clés étrangères.
+Le MPD est le schéma SQL final, spécifique au SGBD choisi (SQL Server, PostgreSQL, MySQL…). On passe du MLD au MPD en ajoutant les types de données précis, les valeurs par défaut, les contraintes et la syntaxe du SGBD.
 
 ```sql
+-- Traduction directe du MLD en SQL (dialecte SQL Server)
+CREATE TABLE Service (
+  idService    INT PRIMARY KEY IDENTITY,
+  nomService   NVARCHAR(50) NOT NULL
+);
+
 CREATE TABLE Salarie (
   idSalarie    INT PRIMARY KEY IDENTITY,
   nom          NVARCHAR(50)  NOT NULL,
   email        NVARCHAR(120) NOT NULL UNIQUE,
+  soldeConges  DECIMAL(5,1)  NOT NULL DEFAULT 0,
   idService    INT NOT NULL,
   FOREIGN KEY (idService) REFERENCES Service(idService)
 );
@@ -74,6 +110,27 @@ CREATE TABLE Demande (
   statut       NVARCHAR(20) NOT NULL DEFAULT 'EN_ATTENTE',
   idSalarie    INT NOT NULL,
   FOREIGN KEY (idSalarie) REFERENCES Salarie(idSalarie)
+);
+```
+
+**Association many-to-many — exemple :**
+
+Si un Salarié peut avoir plusieurs Compétences, et une Compétence peut être maîtrisée par plusieurs Salariés, le MCD génère une table de liaison :
+
+```
+SALARIE ——(0,n)——[ possède ]——(0,n)—— COMPETENCE
+```
+
+MLD : `Salarie_Competence (#idSalarie, #idCompetence, niveauMaitrise)`
+
+```sql
+CREATE TABLE Salarie_Competence (
+  idSalarie   INT NOT NULL,
+  idCompetence INT NOT NULL,
+  niveau      INT CHECK (niveau BETWEEN 1 AND 5),
+  PRIMARY KEY (idSalarie, idCompetence),       -- PK composite
+  FOREIGN KEY (idSalarie)    REFERENCES Salarie(idSalarie),
+  FOREIGN KEY (idCompetence) REFERENCES Competence(idCompetence)
 );
 ```
 
@@ -90,14 +147,15 @@ Une base de données fiable garantit les quatre propriétés **ACID** pour ses t
 | **I** | **Intégrité** | Les données restent exactes et cohérentes : clés étrangères respectées, contraintes NOT NULL/UNIQUE vérifiées |
 | **D** | **Durabilité** | Une transaction validée (COMMIT) est définitivement enregistrée, même en cas de panne système |
 
-**Exemple d'utilité de l'atomicité :** lors du dépôt d'une demande, on doit à la fois déduire le solde du salarié ET créer l'enregistrement de la demande. Si l'une des deux opérations échoue, la transaction est annulée (ROLLBACK) — on ne se retrouve jamais avec un solde débité sans demande créée.
+**Exemple d'utilité de l'atomicité :** lors du dépôt d'une demande, on doit à la fois déduire le solde du salarié ET créer l'enregistrement de la demande. Si l'une des deux opérations échoue, la transaction est annulée (`ROLLBACK`) — on ne se retrouve jamais avec un solde débité sans demande créée.
 
 ```sql
 BEGIN TRANSACTION;
   UPDATE Salarie SET soldeConges = soldeConges - 10 WHERE idSalarie = 42;
   INSERT INTO Demande (dateDebut, dateFin, statut, idSalarie)
   VALUES ('2026-07-01', '2026-07-10', 'VALIDEE', 42);
-COMMIT; -- ou ROLLBACK si erreur
+COMMIT;
+-- En cas d'erreur : ROLLBACK annule les deux opérations
 ```
 
 ---

@@ -49,7 +49,10 @@ jobs:
     runs-on: ubuntu-latest    # runner GitHub (VM Ubuntu gratuite)
 
     steps:
-      - uses: actions/checkout@v4         # récupérer le code
+      - uses: actions/checkout@v4
+        # ↑ Récupère le code source du dépôt dans le runner.
+        #   Sans ça, le runner est une VM vide — il ne sait pas quel code builder.
+        #   @v4 = version de l'action (toujours épingler une version, pas @latest)
 
       - name: Installer les dépendances
         run: npm ci                        # lockfile strict

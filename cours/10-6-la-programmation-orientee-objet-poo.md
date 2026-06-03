@@ -210,87 +210,185 @@ s.SePresenter();        // méthode héritée
 
 ---
 
-### 6.6 Classe abstraite et polymorphisme
+### 6.6 Le polymorphisme
 
-**Classe abstraite** : une classe modèle qui **ne peut pas être instanciée** directement. Elle doit être implémentée par des classes dérivées. Elle peut contenir des méthodes `abstract` (sans corps, à implémenter obligatoirement) et des méthodes `virtual` (avec un corps, redéfinissables avec `override`).
+**Définition :** le polymorphisme, c'est le fait qu'**un même appel de méthode produise un résultat différent selon l'objet sur lequel il est appelé**. Même nom, comportement différent.
+
+C'est l'un des piliers de la POO. Sans polymorphisme, on serait obligé d'écrire des `if/else` pour gérer chaque type d'objet, ce qui rend le code fragile et difficile à étendre.
+
+**Exemple concret — sans polymorphisme :**
 
 ```csharp
-public abstract class Employe
+// ❌ Sans polymorphisme : on doit tester le type manuellement
+void AfficherPrime(string typeEmploye)
+{
+    if (typeEmploye == "manager")      Console.WriteLine("Prime : 2000€");
+    else if (typeEmploye == "develo")  Console.WriteLine("Prime : 1000€");
+    else if (typeEmploye == "stagia")  Console.WriteLine("Prime : 0€");
+    // Ajouter un type = modifier cette méthode → fragile
+}
+```
+
+**Exemple — avec polymorphisme :**
+
+```csharp
+// On définit la méthode CalculerPrime() dans chaque classe
+public class Manager
 {
     public string Nom { get; set; } = "";
+    public decimal CalculerPrime() => 2000m;  // comportement propre au Manager
+}
 
-    // abstract : pas de corps — les enfants DOIVENT l'implémenter
+public class Developpeur
+{
+    public string Nom { get; set; } = "";
+    public decimal CalculerPrime() => 1000m;  // comportement propre au Developpeur
+}
+
+public class Stagiaire
+{
+    public string Nom { get; set; } = "";
+    public decimal CalculerPrime() => 0m;     // comportement propre au Stagiaire
+}
+```
+
+Le **même appel** `.CalculerPrime()` renvoie un résultat différent selon l'objet. C'est ça, le polymorphisme : même nom de méthode, comportement adapté à chaque type.
+
+---
+
+### 6.7 La classe abstraite
+
+En pratique, si plusieurs classes partagent des attributs et des méthodes communs (comme `Nom` et `CalculerPrime()` ci-dessus), on factorise dans une **classe parent**. Quand cette classe parent n'a pas de sens à être instanciée seule, on la déclare `abstract`.
+
+**Qu'est-ce qu'une classe abstraite ?**
+
+Une classe abstraite est un **modèle commun à plusieurs classes enfants**. Elle :
+- **Ne peut pas être instanciée** directement (on ne peut pas faire `new Employe()`)
+- Définit des méthodes que les enfants **doivent** implémenter (`abstract`)
+- Peut aussi définir des méthodes que les enfants **peuvent** redéfinir (`virtual`) ou des méthodes communes à tous (méthodes normales)
+
+**Pourquoi « abstraite » ?** Parce qu'un `Employe` seul n'a pas de sens dans notre métier — il est toujours soit un `Manager`, soit un `Developpeur`, soit un `Stagiaire`. On ne peut jamais créer un employé « générique ».
+
+```csharp
+// ← CLASSE ABSTRAITE : modèle commun, ne peut pas être instanciée
+public abstract class Employe
+{
+    // ← Attribut commun à tous les employés
+    public string Nom { get; set; } = "";
+
+    // ← Méthode ABSTRACT : pas de code ici, chaque enfant DOIT la définir
+    //   (chaque type d'employé calcule sa prime différemment)
     public abstract decimal CalculerPrime();
 
-    // virtual : a un corps, mais les enfants PEUVENT le redéfinir
+    // ← Méthode VIRTUAL : a un code par défaut, mais les enfants PEUVENT le changer
     public virtual string Role() => "Employé";
 }
 
+// ← CLASSE ENFANT 1 : hérite d'Employe et implémente CalculerPrime()
 public class Manager : Employe
 {
-    public override decimal CalculerPrime() => 2000m;
-    public override string  Role()          => "Manager";
+    // override = "je remplace la version du parent"
+    public override decimal CalculerPrime() => 2000m;   // ← comportement du Manager
+    public override string  Role()          => "Manager"; // ← remplace "Employé"
 }
 
+// ← CLASSE ENFANT 2 : hérite d'Employe et implémente CalculerPrime()
 public class Developpeur : Employe
 {
-    public override decimal CalculerPrime() => 1000m;
-    // Role() non redéfini → retourne "Employé" (version parent)
+    public override decimal CalculerPrime() => 1000m;   // ← comportement du Developpeur
+    // Role() non redéfini → reste "Employé" (valeur du parent)
 }
 
-// new Employe() → ❌ interdit, classe abstraite
+// ← INTERDIT : Employe est abstraite, on ne peut pas l'instancier
+// new Employe() → ❌ erreur de compilation
 ```
 
-**Polymorphisme** : même appel de méthode, comportement différent selon le type réel de l'objet. Il découle de l'héritage et de l'`override`.
+**Le polymorphisme avec la classe abstraite :**
+
+La classe abstraite + `override` rend le polymorphisme encore plus puissant : on peut manipuler des objets via le type parent `Employe`, et C# appelle automatiquement la bonne version selon l'objet réel.
 
 ```csharp
-// La variable est de type Employe, mais l'objet réel est un Manager ou Developpeur
-Employe e1 = new Manager    { Nom = "Alice" };
-Employe e2 = new Developpeur{ Nom = "Bob"   };
+// ← Les variables sont déclarées comme Employe (type parent)
+//   mais les objets réels sont Manager et Developpeur
+Employe e1 = new Manager     { Nom = "Alice" };   // ← objet réel : Manager
+Employe e2 = new Developpeur { Nom = "Bob"   };   // ← objet réel : Developpeur
 
-// Même appel → résultat différent selon le type réel
-Console.WriteLine(e1.CalculerPrime()); // 2000 (Manager)
-Console.WriteLine(e2.CalculerPrime()); // 1000 (Developpeur)
-Console.WriteLine(e1.Role());          // "Manager"
-Console.WriteLine(e2.Role());          // "Employé"
+// ← MÊME appel sur les deux variables
+// ← COMPORTEMENT DIFFÉRENT selon l'objet réel → c'est le polymorphisme
+Console.WriteLine(e1.CalculerPrime()); // → 2000  (version Manager)
+Console.WriteLine(e2.CalculerPrime()); // → 1000  (version Developpeur)
+Console.WriteLine(e1.Role());          // → "Manager"
+Console.WriteLine(e2.Role());          // → "Employé" (version parent, non redéfinie)
 ```
 
 ---
 
-### 6.7 Interface
+### 6.8 L'interface
 
-Une **interface** est un contrat : elle déclare des méthodes et propriétés que toute classe qui l'implémente **devra** fournir. C'est le principe d'un échangeur — on sait ce qu'on peut faire avec un objet sans connaître son implémentation concrète.
+**Qu'est-ce qu'une interface ?**
+
+Une interface est un **contrat** : elle liste des méthodes que toute classe qui l'implémente **doit** obligatoirement fournir. Elle ne contient aucun code — seulement des signatures de méthodes.
+
+**Analogie :** une prise électrique est une interface. Peu importe l'appareil (lampe, chargeur, télévision), s'il respecte le format de la prise, il peut s'y brancher. La prise ne sait pas ce que fait l'appareil — elle garantit juste que la connexion est possible.
+
+En programmation : si une classe implémente l'interface `INotifiable`, on sait qu'elle possède une méthode `Notifier()`. On peut l'appeler sans savoir ce qu'elle fait concrètement (envoie un e-mail ? un SMS ? affiche à l'écran ?).
+
+**Différence avec la classe abstraite :**
+
+- La classe abstraite dit : *"tu es un type d'Employe, voici ce qu'un Employe sait faire"*
+- L'interface dit : *"peu importe ce que tu es, si tu respectes ce contrat, tu peux faire ça"*
+
+Une classe ne peut hériter que d'**une seule classe abstraite**, mais elle peut implémenter **autant d'interfaces qu'elle veut**.
 
 ```csharp
-// Déclaration de l'interface
+// ← INTERFACE 1 : contrat "peut notifier"
 public interface INotifiable
 {
-    void Notifier(string message);
+    void Notifier(string message);  // ← signature seulement, pas de code
 }
 
+// ← INTERFACE 2 : contrat "peut exporter"
 public interface IExportable
 {
-    byte[] Exporter();
+    byte[] Exporter();              // ← signature seulement, pas de code
 }
 
-// Une classe peut implémenter plusieurs interfaces (contrairement à l'héritage)
+// ← La classe implémente les DEUX interfaces
+//   Elle doit fournir le code pour chaque méthode déclarée
 public class ServiceConges : INotifiable, IExportable
 {
-    public void   Notifier(string message) => Console.WriteLine($"Notif : {message}");
-    public byte[] Exporter()               => System.Text.Encoding.UTF8.GetBytes("export...");
-}
+    // ← Implémentation de INotifiable
+    public void Notifier(string message)
+    {
+        Console.WriteLine($"Notification : {message}");
+    }
 
-// On peut utiliser le type de l'interface
-INotifiable notif = new ServiceConges();
-notif.Notifier("Demande validée !");
+    // ← Implémentation de IExportable
+    public byte[] Exporter()
+    {
+        return System.Text.Encoding.UTF8.GetBytes("données exportées...");
+    }
+}
 ```
+
+**Utilisation via l'interface :**
+
+```csharp
+// On déclare la variable avec le type de l'interface, pas la classe concrète
+// → on sait seulement qu'on peut appeler Notifier(), rien d'autre
+INotifiable notif = new ServiceConges();
+notif.Notifier("Votre demande a été validée !");
+```
+
+**Récapitulatif :**
 
 | | Classe abstraite | Interface |
 | --- | --- | --- |
-| Instanciable | ❌ | ❌ |
-| Peut avoir du code concret | ✅ | ❌ (en règle générale) |
-| Peut avoir des champs/état | ✅ | ❌ |
-| Héritage multiple | ❌ (une seule) | ✅ (plusieurs interfaces) |
+| Instanciable directement | ❌ | ❌ |
+| Contient du code | ✅ | ❌ |
+| Contient des attributs | ✅ | ❌ |
+| Héritage/implémentation multiple | ❌ (une seule) | ✅ (plusieurs) |
+| Représente | Une famille d'objets liés | Un contrat de capacité |
 
 ---
 

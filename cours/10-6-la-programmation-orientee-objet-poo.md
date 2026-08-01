@@ -392,7 +392,91 @@ notif.Notifier("Votre demande a été validée !");
 
 ---
 
-### 6.8 Documenter le code
+### 6.9 Composition ou héritage ?
+
+L'héritage est le premier outil qu'on apprend, et celui dont on abuse le plus. La règle de métier est : **préférer la composition à l'héritage**.
+
+| | **Héritage** — « est un » | **Composition** — « a un » |
+| --- | --- | --- |
+| Lien | Fort, figé à la compilation | Faible, remplaçable à l'exécution |
+| Ce qu'on récupère | Toute l'interface publique du parent, voulue ou non | Uniquement ce qu'on choisit d'exposer |
+| Changer de comportement | Créer une nouvelle sous-classe | Injecter un autre composant |
+| Risque | Une modification du parent casse tous les enfants | Faible |
+
+```csharp
+// ❌ Héritage abusif : un ServiceConges n'EST PAS un journal
+public class ServiceConges : Logger { }
+
+// ✅ Composition : un ServiceConges A UN journal
+public class ServiceConges
+{
+    private readonly ILogger _logger;
+    private readonly IDemandeRepository _repo;
+
+    public ServiceConges(ILogger logger, IDemandeRepository repo)
+    {
+        _logger = logger;
+        _repo   = repo;
+    }
+}
+```
+
+**Le test à appliquer :** la phrase « un X **est un** Y » doit être vraie sans effort. Un `Manager` **est un** `Salarie` : l'héritage se justifie. Un `ServiceConges` **a un** journal : c'est de la composition.
+
+Deux symptômes d'héritage mal placé : une sous-classe qui redéfinit une méthode pour lever une exception (« cette opération ne s'applique pas ici ») — c'est une violation du principe de substitution de Liskov ; et une hiérarchie de plus de trois niveaux, où plus personne ne sait d'où vient un comportement.
+
+---
+
+### 6.10 Types valeur et types référence
+
+En C#, chaque type appartient à l'une des deux familles, et cela change ce qui se passe lors d'une affectation ou d'un passage en paramètre.
+
+| | **Type valeur** | **Type référence** |
+| --- | --- | --- |
+| Exemples | `int`, `double`, `bool`, `char`, `DateOnly`, `decimal`, `struct`, `enum` | `class`, `string`, tableaux, `List<T>`, `object` |
+| Ce que contient la variable | La valeur elle-même | L'adresse d'un objet |
+| À l'affectation | La valeur est **copiée** | La **référence** est copiée : deux variables, un seul objet |
+| Valeur par défaut | `0`, `false`… | `null` |
+
+```csharp
+// Type valeur : la copie est indépendante
+int a = 5;
+int b = a;
+b = 10;
+Console.WriteLine(a);        // 5 — a n'a pas bougé
+
+// Type référence : les deux variables désignent le MÊME objet
+var s1 = new Salarie { Nom = "Dumont" };
+var s2 = s1;
+s2.Nom = "Nadir";
+Console.WriteLine(s1.Nom);   // "Nadir" — c'est le même objet
+
+// Conséquence en méthode
+void Renommer(Salarie s) => s.Nom = "Modifié";   // ← modifie l'objet de l'appelant
+void Incrementer(int n)  => n++;                 // ← sans effet chez l'appelant
+```
+
+**Le cas de `string`** est le piège classique : c'est un type **référence**, mais il est **immuable**. Toute « modification » crée en réalité une nouvelle chaîne, ce qui lui donne l'apparence d'un type valeur. C'est aussi pourquoi concaténer dans une boucle est coûteux — on préfère `StringBuilder`.
+
+**Deux mots-clés utiles :**
+
+```csharp
+// enum : un ensemble fermé de valeurs nommées — bien mieux qu'une string libre
+public enum StatutDemande { EnAttente, Validee, Refusee, Annulee }
+
+// record : une classe faite pour porter des données, immuable, comparée par valeur
+public record DemandeDto(DateOnly DateDebut, DateOnly DateFin);
+
+var d1 = new DemandeDto(new(2026, 7, 1), new(2026, 7, 15));
+var d2 = new DemandeDto(new(2026, 7, 1), new(2026, 7, 15));
+Console.WriteLine(d1 == d2);   // true — comparaison par valeur, pas par référence
+```
+
+Remplacer `string Statut` par `StatutDemande Statut` supprime d'un coup toute une famille de bugs : plus de faute de frappe, plus de valeur inattendue, et le compilateur vérifie l'exhaustivité des `switch`.
+
+---
+
+### 6.11 Documenter le code
 
 En C#, le triple slash `///` génère un bloc de documentation structuré, exploité par l'IDE (IntelliSense) et les outils de génération de doc.
 

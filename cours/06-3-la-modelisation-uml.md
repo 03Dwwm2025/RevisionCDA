@@ -1,6 +1,11 @@
 ## 3. La modélisation UML
 
-Là où Merise se concentre sur les données, **UML** (*Unified Modeling Language*) modélise aussi les **comportements** et la **structure objet**. Trois diagrammes sont incontournables au CDA.
+Là où Merise se concentre sur les données, **UML** (*Unified Modeling Language*) modélise aussi les **comportements** et la **structure objet**. UML compte 14 diagrammes ; cinq suffisent largement au CDA, et on les classe en deux familles :
+
+| Famille | Ce qu'elle décrit | Diagrammes |
+| --- | --- | --- |
+| **Statique** (structurel) | Ce qui existe, indépendamment du temps | Classes, composants, déploiement |
+| **Dynamique** (comportemental) | Ce qui se passe, dans le temps | Cas d'utilisation, séquence, activité, états-transitions |
 
 ---
 
@@ -140,10 +145,131 @@ Salarié      UI          Controller    Service      Repository    BDD
 
 Le diagramme de séquence complète le diagramme de classes : là où le diagramme de classes montre la **structure** (qui existe), le diagramme de séquence montre le **comportement** (qui appelle qui, dans quel ordre).
 
+---
+
+### 3.4 Diagramme d'activité
+
+Vue **dynamique** du **déroulement d'un processus métier** : les étapes, les décisions, les branches parallèles. C'est l'équivalent UML de l'organigramme, mais normalisé. On l'utilise pour décrire un cas d'utilisation complexe, un algorithme métier ou un flux avec plusieurs acteurs.
+
+**Éléments :**
+
+| Symbole | Nom | Rôle |
+| --- | --- | --- |
+| Cercle plein | Nœud initial | Le début du processus |
+| Rectangle arrondi | Action | Une étape |
+| Losange | Nœud de décision / fusion | Un branchement conditionnel `[garde]` |
+| Barre épaisse | Fourche / jointure | Démarre ou resynchronise des branches parallèles |
+| Cercle plein cerclé | Nœud final | La fin du processus |
+| Couloir (*swimlane*) | Partition | Qui exécute quelle étape |
+
+**Exemple — le traitement d'une demande de congé :**
+
+```
+  SALARIÉ           │        SYSTÈME             │       MANAGER
+                    │                            │
+   ● début          │                            │
+   │                │                            │
+   ▼                │                            │
+ [Saisir demande]   │                            │
+   │                │                            │
+   └───────────────►│  [Vérifier le solde]       │
+                    │        │                   │
+                    │        ◇ solde suffisant ? │
+                    │       ╱ ╲                  │
+                    │  [non]   [oui]             │
+                    │    │       │               │
+                    │    ▼       ▼               │
+                    │ [Refuser] [Enregistrer     │
+                    │  auto]     EN_ATTENTE]     │
+                    │    │       │               │
+                    │    │       └──────────────►│ [Examiner]
+                    │    │                       │     │
+                    │    │                       │     ◇ décision ?
+                    │    │                       │    ╱ ╲
+                    │    │                       │ [refuse] [valide]
+                    │    │                       │    │       │
+                    │    │◄──────────────────────┘    │       │
+                    │    ▼                            ▼       ▼
+                    │ [Notifier le salarié] ◄─────────┴───────┘
+                    │    │
+                    │    ▼
+                    │    ◉ fin
+```
+
+**Séquence ou activité — comment choisir ?** Le diagramme de séquence montre **qui appelle qui** entre objets techniques (Controller, Service, Repository). Le diagramme d'activité montre **l'enchaînement métier**, sans se soucier de l'implémentation. Le premier parle au développeur, le second au client.
+
+---
+
+### 3.5 Diagramme d'états-transitions
+
+Vue **dynamique** du **cycle de vie d'un seul objet** : les états qu'il peut prendre et les événements qui le font passer de l'un à l'autre. Dès qu'une entité porte une colonne `statut`, ce diagramme est le bon outil pour cadrer ses règles.
+
+**Notation :** un état est un rectangle arrondi ; une transition est une flèche étiquetée `événement [garde] / action`.
+
+**Exemple — le cycle de vie d'une Demande :**
+
+```
+        ● 
+        │ créer()
+        ▼
+  ┌──────────────┐   valider() [rôle=Manager]    ┌──────────┐
+  │  EN_ATTENTE  │──────────────────────────────►│  VALIDEE │
+  └──────────────┘                               └──────────┘
+      │      │                                        │
+      │      │ refuser() [rôle=Manager]               │ annuler()
+      │      │                                        │ [dateDebut > aujourd'hui]
+      │      ▼                                        │ / recréditer le solde
+      │  ┌──────────┐                                 │
+      │  │  REFUSEE │                                 │
+      │  └──────────┘                                 ▼
+      │      │                                  ┌───────────┐
+      │ annuler()                               │  ANNULEE  │
+      └────────────────────────────────────────►└───────────┘
+                                                       │
+                                                       ▼
+                                                       ◉
+```
+
+Ce que le diagramme rend visible immédiatement :
+- une demande `REFUSEE` ne peut plus être validée — la transition n'existe pas ;
+- l'annulation d'une demande validée **recrédite le solde** (l'action `/ recréditer le solde`) ;
+- on ne peut annuler qu'une demande qui n'a pas commencé (la garde `[dateDebut > aujourd'hui]`).
+
+Ces trois règles se traduisent directement en tests unitaires du Service, et en contraintes dans le code. C'est le diagramme qui rapporte le plus par rapport au temps passé à le dessiner.
+
+---
+
+### 3.6 Les deux diagrammes du déploiement
+
+Pour le bloc 3 (préparer le déploiement), deux diagrammes statiques complètent la panoplie :
+
+- **Diagramme de composants** : les briques logicielles et leurs interfaces (le front, l'API, la base, le service d'envoi d'e-mails) et qui dépend de qui.
+- **Diagramme de déploiement** : sur **quelle machine** tourne quoi. Les nœuds (serveur VPS, poste client, conteneur) et les artefacts qu'ils hébergent.
+
+```
+  ┌───────────────────┐            ┌──────────────────────────────────┐
+  │  <<device>>       │   HTTPS    │  <<device>> VPS Linux            │
+  │  Poste client     │───────────►│  ┌────────────────────────────┐  │
+  │  ┌─────────────┐  │            │  │ <<container>> nginx        │  │
+  │  │ Navigateur  │  │            │  ├────────────────────────────┤  │
+  │  └─────────────┘  │            │  │ <<container>> api (:3000)  │  │
+  └───────────────────┘            │  ├────────────────────────────┤  │
+                                   │  │ <<container>> db (:5432)   │  │
+                                   │  └────────────────────────────┘  │
+                                   └──────────────────────────────────┘
+```
+
+C'est ce schéma qu'on attend dans un dossier de projet pour expliquer l'architecture de production.
+
+---
+
 > **📌 À retenir**
 >
-> | Diagramme | Répond à | Type |
+> | Diagramme | Répond à | Famille |
 > | --- | --- | --- |
-> | Cas d'utilisation | Qui fait quoi ? | Fonctionnel |
+> | Cas d'utilisation | Qui fait quoi ? | Dynamique (fonctionnel) |
 > | Classes | Comment c'est structuré ? | Statique |
-> | Séquence | Dans quel ordre ça se passe ? | Dynamique |
+> | Séquence | Qui appelle qui, dans quel ordre ? | Dynamique |
+> | Activité | Comment se déroule le processus métier ? | Dynamique |
+> | États-transitions | Quels états peut prendre cet objet ? | Dynamique |
+> | Composants / Déploiement | Quelles briques, sur quelles machines ? | Statique |

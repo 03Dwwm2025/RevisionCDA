@@ -372,6 +372,31 @@ primary-500       →   --color-primary-500  →   colors.primary[500]
 
 ---
 
+### 4.11 Éco-conception et numérique responsable
+
+Concevoir sobre fait désormais partie du métier, et c'est un sujet que le jury apprécie parce qu'il touche à la fois à la conception, au front-end et à l'hébergement.
+
+**Le principe :** la page la plus économe est celle qui n'existe pas. On enlève avant d'optimiser — une fonctionnalité que personne n'utilise coûte de la bande passante, du stockage et de la maintenance à chaque visite.
+
+| Levier | Geste concret | Gain |
+| --- | --- | --- |
+| **Contenu** | Supprimer les écrans et champs inutilisés | Le plus fort de tous |
+| **Images** | Formats modernes (WebP, AVIF), dimensions réelles, chargement différé | Souvent la moitié du poids d'une page |
+| **Polices** | Se limiter à deux graisses, ou utiliser les polices du système | Plusieurs centaines de kilo-octets |
+| **JavaScript** | Éviter une bibliothèque de 300 Ko pour une fonction de 10 lignes | Temps de chargement et de calcul |
+| **Requêtes** | Mettre en cache, paginer, éviter les appels en boucle | Charge serveur et batterie du client |
+| **Données** | Définir une durée de conservation et purger | Stockage et sauvegardes |
+
+**Les convergences à connaître :** l'éco-conception rejoint trois autres exigences du référentiel.
+
+- **Performance** : moins de poids, c'est un chargement plus rapide.
+- **Accessibilité** : une page sobre, en HTML sémantique, est plus lisible pour un lecteur d'écran et sur une connexion faible.
+- **RGPD** : la minimisation des données est à la fois une obligation légale et un geste de sobriété.
+
+Le **référentiel général d'écoconception de services numériques (RGESN)** est le cadre officiel français, dans la même famille que le RGAA pour l'accessibilité. Des outils comme EcoIndex ou Lighthouse donnent une mesure de départ.
+
+---
+
 > **🔒 Sécurité**
 >
 > - **Messages d'erreur génériques** : « Identifiants incorrects » plutôt que « Mot de passe erroné » — ce dernier confirme qu'un e-mail existe (*user enumeration*), ce qui aide les attaquants.

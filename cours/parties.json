@@ -1,0 +1,27 @@
+[
+  {
+    "nom": "INTRODUCTION",
+    "titre": "Introduction",
+    "resume": "Le cadre du titre professionnel, ses trois blocs de compétences, le déroulé de l'examen, et le cycle de vie d'un projet logiciel."
+  },
+  {
+    "nom": "PARTIE I — CONCEPTION",
+    "titre": "Conception",
+    "resume": "La conception transforme un besoin flou en un plan précis et exploitable. On y définit quoi construire (analyse), comment structurer les données (modélisation), à quoi ressemblera l'application (maquettage) et comment le code sera organisé (architecture). Mal faite, cette phase produit une dette qui se paie pendant toute la vie du projet."
+  },
+  {
+    "nom": "PARTIE II — DÉVELOPPEMENT",
+    "titre": "Développement",
+    "resume": "Le développement traduit la conception en code qui fonctionne : programmation orientée objet, principes SOLID, organisation en couches, accès aux données, API, interfaces, gestion de versions et tests — la sécurité au premier plan à chaque étape."
+  },
+  {
+    "nom": "PARTIE III — DÉPLOIEMENT",
+    "titre": "Déploiement",
+    "resume": "Une application n'a de valeur qu'entre les mains de ses utilisateurs. Le déploiement amène le code jusqu'à la production de façon reproductible, automatisée et sécurisée : conteneurisation, intégration et déploiement continus, mise en production durcie, supervision."
+  },
+  {
+    "nom": "ANNEXES",
+    "titre": "Annexes",
+    "resume": "Les récapitulatifs de dernière minute : la sécurité étape par étape, le glossaire et la checklist de révision."
+  }
+]

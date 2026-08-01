@@ -216,7 +216,107 @@ app.UseCors("PolitiqueFront");
 
 ---
 
-### 10.7 Swagger / OpenAPI
+### 10.7 Pagination, filtrage, tri
+
+Renvoyer 50 000 demandes dans un seul `GET /api/demandes` sature le serveur, le réseau et le navigateur. Une collection se pagine.
+
+```
+GET /api/demandes?page=2&taille=20&statut=EN_ATTENTE&tri=-dateDebut
+                  └──── pagination ────┘ └─ filtre ─┘ └─── tri ───┘
+                                                        (- = décroissant)
+```
+
+```csharp
+[HttpGet]
+public IActionResult Lister([FromQuery] int page = 1, [FromQuery] int taille = 20,
+                            [FromQuery] string? statut = null)
+{
+    taille = Math.Clamp(taille, 1, 100);   // ← borner : sinon taille=1000000 devient une attaque
+    var (items, total) = _service.Lister(page, taille, statut);
+
+    return Ok(new
+    {
+        donnees = items,
+        page,
+        taille,
+        total,
+        totalPages = (int)Math.Ceiling(total / (double)taille)
+    });
+}
+```
+
+**Deux stratégies de pagination :**
+
+| Stratégie | Requête | Avantage | Limite |
+| --- | --- | --- | --- |
+| Par décalage (*offset*) | `?page=2&taille=20` → `OFFSET 20 LIMIT 20` | Simple, permet d'aller directement à la page N | Lent sur de très gros décalages ; une insertion pendant la navigation décale les résultats |
+| Par curseur | `?apres=<id du dernier>` | Stable et rapide même sur de gros volumes | On ne peut avancer que de proche en proche |
+
+Retourner le total et le nombre de pages évite au client de deviner. Certaines API passent ces informations dans des en-têtes (`X-Total-Count`, `Link`) plutôt que dans le corps — les deux se défendent, l'important est d'être cohérent.
+
+---
+
+### 10.8 Versionner son API
+
+Dès qu'un client extérieur consomme l'API, on ne peut plus casser un contrat sans prévenir. La version se place le plus souvent dans l'URL :
+
+```
+GET /api/v1/demandes     ← l'ancienne, maintenue le temps de la migration
+GET /api/v2/demandes     ← la nouvelle, avec la réponse paginée
+```
+
+```csharp
+[ApiController]
+[Route("api/v{version:apiVersion}/demandes")]
+[ApiVersion("1.0")]
+[ApiVersion("2.0")]
+public class DemandesController : ControllerBase { /* ... */ }
+```
+
+| Emplacement de la version | Exemple | Remarque |
+| --- | --- | --- |
+| Dans l'URL | `/api/v2/demandes` | Le plus lisible et le plus répandu |
+| Dans un en-tête | `Api-Version: 2.0` | URL plus propre, mais moins visible au débogage |
+| Dans le type de média | `Accept: application/vnd.congeapp.v2+json` | Le plus « pur » au sens REST, le plus rare en pratique |
+
+**Ce qui exige une nouvelle version majeure :** supprimer ou renommer un champ, changer un type, rendre obligatoire un paramètre qui ne l'était pas, modifier le sens d'un code de statut. **Ce qui n'en exige pas :** ajouter un champ optionnel dans la réponse, ajouter un endpoint. C'est exactement la logique de SemVer, appliquée au contrat d'API.
+
+---
+
+### 10.9 Session ou jeton : deux façons d'authentifier
+
+| | **Session serveur + cookie** | **Jeton JWT** |
+| --- | --- | --- |
+| Où vit l'état | Sur le serveur (mémoire, Redis, base) | Dans le jeton lui-même, chez le client |
+| Transport | Cookie envoyé automatiquement | En-tête `Authorization: Bearer` |
+| Déconnexion immédiate | Oui — on supprime la session | Difficile : le jeton reste valide jusqu'à son expiration |
+| Montée en charge | Il faut partager les sessions entre serveurs | Chaque serveur vérifie seul la signature |
+| Exposé au CSRF | Oui (cookie automatique) → `SameSite` + jeton anti-CSRF | Non, si le jeton est dans un en-tête |
+| Exposé au XSS | Limité si le cookie est `HttpOnly` | Oui, si le jeton est stocké en `localStorage` |
+
+Il n'y a pas de gagnant universel : la session convient à une application web classique servie par le même domaine, le jeton convient à une API consommée par plusieurs clients (site, application mobile, service tiers).
+
+**Le couple jeton d'accès / jeton de rafraîchissement** résout le compromis entre sécurité et confort :
+
+```
+1. Connexion réussie
+   → jeton d'accès      (durée courte : 15 à 60 min, envoyé à chaque requête)
+   → jeton de rafraîchissement (durée longue : plusieurs jours, stocké en cookie HttpOnly)
+
+2. Le jeton d'accès expire
+   → le client appelle POST /api/auth/refresh avec le jeton de rafraîchissement
+   → le serveur vérifie qu'il est valide ET qu'il n'a pas été révoqué (il est en base)
+   → il renvoie un nouveau jeton d'accès
+
+3. Déconnexion ou vol détecté
+   → on révoque le jeton de rafraîchissement en base : plus aucun renouvellement
+```
+
+Le jeton d'accès reste court pour limiter la fenêtre de vol ; le jeton de rafraîchissement, lui, est stocké côté serveur, donc **révocable** — ce qui rattrape le principal défaut du JWT.
+
+---
+
+### 10.10 Swagger / OpenAPI
 
 Swagger génère automatiquement une **documentation interactive** de l'API accessible dans le navigateur. Très utile pour tester les endpoints pendant le développement.
 

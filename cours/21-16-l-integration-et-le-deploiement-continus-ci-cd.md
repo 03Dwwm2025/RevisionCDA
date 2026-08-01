@@ -7,8 +7,16 @@ La CI/CD automatise le chemin du code source jusqu'à la production. L'objectif 
 **CI — Intégration Continue :**
 À chaque `push`, le pipeline **construit** le projet et lance les **tests** automatiquement. Si un test échoue, tout le monde est alerté immédiatement — avant que le code ne soit fusionné dans `main`.
 
-**CD — Déploiement Continu :**
-Si la CI passe, l'application est **déployée automatiquement** vers un environnement cible (staging, production). Pas de déploiement manuel, pas d'oubli de commande.
+**CD — attention, deux CD différents.** Le sigle recouvre deux niveaux d'automatisation qu'il faut savoir distinguer :
+
+| Sigle | Nom | Ce qui est automatisé | Qui déclenche la prod |
+| --- | --- | --- | --- |
+| **CD** | *Continuous **Delivery*** (livraison continue) | Build, tests, packaging, déploiement en préproduction. L'artefact est **prêt à partir** à tout moment. | Un humain appuie sur le bouton |
+| **CD** | *Continuous **Deployment*** (déploiement continu) | Tout, jusqu'à la production incluse | Personne — chaque commit vert part en prod |
+
+La livraison continue est la marche intermédiaire : elle donne la fiabilité de l'automatisation tout en gardant une validation humaine avant la production. Le déploiement continu suppose une confiance totale dans la suite de tests, et un retour arrière rapide.
+
+Dans ce cours, le pipeline présenté fait du **déploiement continu** sur `main` : si la CI passe, l'application part automatiquement vers l'environnement cible.
 
 ```
 Push sur main
@@ -69,14 +77,33 @@ jobs:
     if: github.ref == 'refs/heads/main'   # uniquement sur main (pas les PRs)
 
     steps:
+      - uses: actions/checkout@v4
+        # ↑ Chaque job démarre sur un runner NEUF : il faut re-récupérer le code.
+        #   Les jobs ne partagent rien entre eux (sauf via des artefacts).
+
+      - name: Se connecter au registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build et push de l'image Docker
         run: |
           docker build -t ghcr.io/${{ github.repository }}:${{ github.sha }} .
           docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
 
+      - name: Installer la clé SSH de déploiement
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
       - name: Déployer sur le VPS via SSH
         run: |
-          ssh deploy@mon-vps 'cd /srv/app && docker compose pull && docker compose up -d'
+          ssh deploy@${{ secrets.VPS_HOST }} \
+            'cd /srv/app && docker compose pull && docker compose up -d'
 ```
 
 **Concepts clés :**

@@ -161,7 +161,28 @@ Tout ne peut pas être développé en même temps ni avec la même urgence. MoSC
 
 ---
 
-### 1.7 Identifier les acteurs et les droits
+### 1.7 Les règles de gestion
+
+Une **règle de gestion** est une contrainte du métier, exprimée en une phrase, indépendante de toute technique. C'est le maillon qui relie le cahier des charges au modèle de données et au code : chaque règle finit soit en contrainte SQL, soit en test dans la couche métier, soit dans les deux.
+
+On les numérote pour pouvoir s'y référer partout ensuite.
+
+| N° | Règle de gestion | Où elle se traduit |
+| --- | --- | --- |
+| RG-01 | Un salarié appartient à un seul service ; un service compte plusieurs salariés | Cardinalité (1,1)–(0,n) dans le MCD → clé étrangère `idService` |
+| RG-02 | Une demande porte sur une période dont la date de fin est postérieure ou égale à la date de début | Contrainte `CHECK` en base + test unitaire du Service |
+| RG-03 | Un salarié ne peut pas déposer une demande dépassant son solde disponible | Règle métier dans le Service (elle nécessite un calcul, pas une simple contrainte) |
+| RG-04 | Seul le manager du service du demandeur peut valider une demande | Contrôle d'autorisation dans le Controller et le Service |
+| RG-05 | Le solde est recrédité lorsqu'une demande validée est annulée avant son début | Règle métier + diagramme d'états-transitions |
+| RG-06 | Deux demandes acceptées d'un même salarié ne peuvent pas se chevaucher | Règle métier (requête de vérification avant insertion) |
+
+**Comment les repérer :** ce sont les phrases du client qui contiennent « doit », « ne peut pas », « seulement si », « au maximum ». Chaque fois qu'un verbe de ce type apparaît dans un entretien, on tient une règle de gestion.
+
+**Le réflexe qui fait la différence :** pour chaque règle, se demander **où** on la fait respecter. Une règle posée uniquement dans l'interface est contournable en trois secondes ; une règle posée en base sans message clair donne une erreur incompréhensible à l'utilisateur. La bonne réponse est en général les deux — contrainte en base pour l'intégrité, contrôle dans le Service pour le message.
+
+---
+
+### 1.8 Identifier les acteurs et les droits
 
 L'analyse des besoins doit identifier précisément **qui** utilisera le système, **ce qu'il peut faire** et **ce qu'il ne peut pas faire**.
 

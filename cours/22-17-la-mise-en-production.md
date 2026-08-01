@@ -154,7 +154,91 @@ Le fichier `.env` est lu par Docker Compose et injecté comme variables d'enviro
 
 ---
 
-### 17.5 Checklist de mise en production
+### 17.5 Les environnements
+
+Le code traverse plusieurs environnements avant d'atteindre l'utilisateur. Chacun a un rôle distinct, et la règle est qu'ils soient **aussi proches que possible** les uns des autres — un bug qui n'apparaît qu'en production vient le plus souvent d'un écart d'environnement.
+
+| Environnement | Qui l'utilise | Données | Rôle |
+| --- | --- | --- | --- |
+| **Développement** (local) | Le développeur | Jeu d'essai local | Coder et déboguer |
+| **Intégration / test** | La CI | Jeu d'essai reproductible | Exécuter les tests automatisés à chaque commit |
+| **Recette / préproduction** | Le client, le testeur | Copie anonymisée de la production | Dérouler le cahier de recettes, valider avant la prod |
+| **Production** | Les utilisateurs réels | Données réelles | Le service rendu |
+
+C'est précisément ce que Docker apporte : la même image traverse les quatre environnements, seule la configuration change (variables d'environnement). On élimine la classe entière des bugs « ça marchait chez moi ».
+
+> **RGPD :** copier la base de production en préproduction pour « tester avec de vraies données » est une faute. Les données personnelles doivent être **anonymisées ou pseudonymisées** avant de quitter la production.
+
+---
+
+### 17.6 Les stratégies de déploiement et le retour arrière
+
+| Stratégie | Principe | Coupure de service | Retour arrière |
+| --- | --- | --- | --- |
+| **Recreate** | On arrête l'ancienne version, on démarre la nouvelle | Oui, quelques secondes à quelques minutes | Redéployer l'ancienne image |
+| **Rolling update** | On remplace les instances une par une | Non | Progressif, instance par instance |
+| **Blue-green** | Deux environnements complets ; on bascule le trafic de « bleu » vers « vert » d'un coup | Non | Immédiat — on rebascule le routage |
+| **Canary** | La nouvelle version reçoit d'abord 5 % du trafic, puis 25 %, puis tout | Non | On coupe la part canari |
+
+```
+Blue-green — la bascule est un changement de routage, pas un redéploiement
+
+              ┌──────────────────┐
+   Nginx ────►│  BLUE  v1.4.0    │  ← trafic actuel
+      │       └──────────────────┘
+      │       ┌──────────────────┐
+      └ ─ ─ ─►│  GREEN v1.5.0    │  ← déployée, testée, en attente
+              └──────────────────┘
+   On modifie l'amont Nginx : le trafic passe sur GREEN.
+   Si un problème apparaît, on revient sur BLUE en une commande.
+```
+
+Pour un projet CDA sur un seul VPS, le `docker compose up -d` fait un **recreate** : quelques secondes d'indisponibilité, ce qui est acceptable. Ce qui compte, c'est de pouvoir **revenir en arrière** :
+
+```bash
+# Le retour arrière suppose une image taguée par version ou par commit
+IMAGE_TAG=abc1234 docker compose up -d      # on redéploie le commit précédent
+```
+
+C'est la raison concrète pour laquelle on évite le tag `latest` : sans version identifiable, il n'y a pas de retour arrière possible.
+
+**Le retour arrière de la base de données** est le vrai point dur : une migration qui a supprimé une colonne ne se défait pas en redéployant l'ancienne image. Deux réflexes : écrire des migrations **réversibles** (chaque `Up` a son `Down`), et procéder par **étapes compatibles** — ajouter la nouvelle colonne, déployer le code qui sait lire les deux formes, migrer les données, puis seulement supprimer l'ancienne colonne dans une version ultérieure.
+
+---
+
+### 17.7 Documenter le déploiement
+
+Le référentiel demande de **préparer et documenter** le déploiement. La documentation est un livrable du bloc 3, au même titre que le pipeline.
+
+| Document | Destinataire | Contenu |
+| --- | --- | --- |
+| **Manuel de déploiement** | Celui qui déploie | Prérequis, variables d'environnement attendues, commandes exactes, procédure de retour arrière |
+| **Documentation technique** | Le développeur qui reprend le projet | Architecture, schéma de base de données, dépendances, choix techniques et leurs raisons |
+| **Documentation d'API** | Le développeur front, l'intégrateur | Endpoints, formats, codes d'erreur — générée par Swagger/OpenAPI |
+| **Manuel utilisateur** | L'utilisateur final | Comment se connecter, déposer une demande, la suivre |
+| **Notes de version** | Tout le monde | Ce qui change dans cette version, ce qui casse |
+
+**Le versionnement sémantique (SemVer)** donne une version qui porte du sens :
+
+```
+        MAJEUR . MINEUR . CORRECTIF
+           2   .   4    .    1
+           │       │         └── correction de bug, compatible
+           │       └──────────── nouvelle fonctionnalité, compatible
+           └──────────────────── changement incompatible (rupture d'API)
+```
+
+| Passage | Quand | Exemple sur CongeApp |
+| --- | --- | --- |
+| `1.4.0` → `1.4.1` | Correction sans changement d'usage | Le calcul du solde arrondissait mal |
+| `1.4.1` → `1.5.0` | Ajout rétrocompatible | Nouvel endpoint d'export PDF |
+| `1.5.0` → `2.0.0` | Rupture | `GET /api/demandes` renvoie désormais un objet paginé au lieu d'un tableau |
+
+Les versions se posent en **tags Git annotés** (`git tag -a v1.5.0 -m "Export PDF"`), et servent de tag d'image Docker. Combinées aux Conventional Commits vus au chapitre Git, elles permettent de générer les notes de version automatiquement.
+
+---
+
+### 17.8 Checklist de mise en production
 
 | Étape | Vérifié ? |
 | --- | --- |

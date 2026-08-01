@@ -166,6 +166,82 @@ La BDD n'est **jamais exposée directement sur Internet** : elle n'est accessibl
 
 ---
 
+### 5.6 Les patrons de conception (design patterns)
+
+Un **patron de conception** est une solution éprouvée à un problème de conception qui revient souvent. Ce n'est pas du code à copier : c'est un schéma d'organisation, et surtout un **vocabulaire commun** — dire « ici j'utilise un Repository » remplace un paragraphe d'explication.
+
+On les classe en trois familles.
+
+| Famille | Ce qu'elle résout | Exemples |
+| --- | --- | --- |
+| **Création** | Comment instancier les objets | Singleton, Factory, Builder |
+| **Structure** | Comment assembler les objets | Adapter, Decorator, Facade, **Repository** |
+| **Comportement** | Comment les objets collaborent | Strategy, Observer, Template Method |
+
+**Singleton — une seule instance pour toute l'application**
+
+```csharp
+// Une configuration, un cache, un pool de connexions : un seul exemplaire suffit.
+builder.Services.AddSingleton<IConfigurationCache, ConfigurationCache>();
+```
+
+En ASP.NET Core, on n'écrit plus le patron à la main : le conteneur d'injection de dépendances le fournit avec `AddSingleton`. À utiliser avec prudence — un singleton porte un état global partagé, donc il doit être conçu pour l'accès concurrent.
+
+**Factory — déléguer la création à une méthode dédiée**
+
+```csharp
+public class Resultat
+{
+    public bool   Succes  { get; private set; }
+    public string Message { get; private set; } = "";
+
+    private Resultat() { }   // ← constructeur fermé
+
+    // Méthodes de fabrique : le nom dit l'intention
+    public static Resultat Ok()                  => new() { Succes = true };
+    public static Resultat Erreur(string msg)    => new() { Succes = false, Message = msg };
+}
+```
+
+`Resultat.Erreur("Solde insuffisant")` se lit mieux que `new Resultat(false, "Solde insuffisant")`, et empêche de construire un objet incohérent.
+
+**Strategy — interchanger un algorithme**
+
+```csharp
+public interface ICalculSolde { decimal Calculer(Salarie s); }
+
+public class CalculStandard : ICalculSolde { /* 25 jours par an */ }
+public class CalculCadre    : ICalculSolde { /* 25 jours + RTT   */ }
+
+// Le Service reçoit la stratégie : ajouter un nouveau mode de calcul
+// n'oblige pas à modifier le Service (principe Open/Closed).
+public class ServiceConges(ICalculSolde calcul) { /* ... */ }
+```
+
+**Observer — notifier plusieurs abonnés d'un événement**
+
+Quand une demande est validée, plusieurs choses doivent se produire : envoyer un e-mail, écrire un journal, mettre à jour un tableau de bord. Plutôt que d'empiler les appels dans le Service, celui-ci publie un événement et les abonnés réagissent chacun de leur côté. C'est le patron derrière les `event` C# et les systèmes de messages.
+
+**Repository — isoler l'accès aux données**
+
+C'est le patron que tu utilises déjà dans ce cours sans le nommer : le Service parle d'une **collection d'objets métier**, le Repository traduit en SQL. Bénéfice concret : changer de SGBD, ou remplacer le vrai dépôt par un faux en test, sans toucher au métier.
+
+> **Le piège des patrons :** les appliquer partout est un défaut, pas une qualité. Un patron ajoute une indirection — donc de la complexité. On l'introduit quand le problème qu'il résout se présente vraiment (rasoir d'Ockham). Une factory pour une classe instanciée à un seul endroit, c'est du bruit.
+
+---
+
+### 5.7 Monolithe, modulaire, microservices
+
+| Style | Description | Quand le choisir |
+| --- | --- | --- |
+| **Monolithe** | Une seule application déployée d'un bloc, organisée en couches | La grande majorité des projets, dont un projet CDA : simple à développer, à déboguer et à déployer |
+| **Monolithe modulaire** | Un seul déploiement, mais des modules métier étanches | Quand l'application grossit et qu'on veut préparer une découpe éventuelle |
+| **Microservices** | Plusieurs services déployés indépendamment, qui communiquent par le réseau | Grosses équipes, besoins de montée en charge très différents d'un service à l'autre |
+
+Les microservices résolvent un problème **d'organisation** (permettre à dix équipes de livrer sans se bloquer) au prix d'un coût technique important : réseau entre les services, cohérence des données distribuée, supervision multipliée, déploiement plus complexe. Pour un projet mené par une personne ou une petite équipe, le monolithe en couches est le bon choix — et savoir **expliquer pourquoi** vaut mieux que d'empiler des services.
+
+---
+
 > **🔒 Sécurité**
 >
 > L'architecture en couches est en elle-même un dispositif de sécurité (**défense en profondeur**) :

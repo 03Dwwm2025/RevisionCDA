@@ -54,7 +54,190 @@ LEFT JOIN Demande d ON d.idSalarie = s.idSalarie;
 
 ---
 
-### 9.3 Transactions et propriétés ACID
+**Les autres jointures :**
+
+| Jointure | Résultat |
+| --- | --- |
+| `FULL OUTER JOIN` | Toutes les lignes des deux tables, avec `NULL` là où il n'y a pas de correspondance |
+| `CROSS JOIN` | Le produit cartésien — chaque ligne de gauche avec chaque ligne de droite |
+| Auto-jointure | Une table jointe avec elle-même, via deux alias |
+
+```sql
+-- Auto-jointure : afficher chaque salarié avec le nom de son manager
+SELECT s.nom AS salarie, m.nom AS manager
+FROM Salarie s
+LEFT JOIN Salarie m ON m.idSalarie = s.idManager;
+```
+
+---
+
+### 9.3 Agréger et regrouper
+
+Les **fonctions d'agrégation** calculent une valeur unique à partir d'un ensemble de lignes.
+
+| Fonction | Calcul |
+| --- | --- |
+| `COUNT(*)` | Nombre de lignes |
+| `COUNT(col)` | Nombre de valeurs non-`NULL` dans la colonne |
+| `SUM(col)` | Somme |
+| `AVG(col)` | Moyenne |
+| `MIN` / `MAX` | Plus petite / plus grande valeur |
+
+```sql
+-- Combien de demandes en attente, au total ?
+SELECT COUNT(*) AS nbEnAttente
+FROM Demande
+WHERE statut = 'EN_ATTENTE';
+```
+
+**`GROUP BY` — un résultat par groupe :**
+
+```sql
+-- Nombre de demandes et total de jours posés, par salarié
+SELECT s.nom,
+       COUNT(*)          AS nbDemandes,
+       SUM(d.nbJours)    AS totalJours
+FROM Demande d
+JOIN Salarie s ON s.idSalarie = d.idSalarie
+GROUP BY s.idSalarie, s.nom
+ORDER BY totalJours DESC;
+```
+
+**Règle à retenir :** toute colonne du `SELECT` qui n'est pas dans une fonction d'agrégation doit apparaître dans le `GROUP BY`. Sinon le SGBD ne sait pas quelle valeur choisir dans le groupe (et refuse la requête).
+
+**`WHERE` vs `HAVING` — le piège classique :**
+
+```sql
+SELECT s.nom, COUNT(*) AS nbDemandes
+FROM Demande d
+JOIN Salarie s ON s.idSalarie = d.idSalarie
+WHERE d.statut = 'VALIDEE'      -- ← filtre les LIGNES, avant le regroupement
+GROUP BY s.idSalarie, s.nom
+HAVING COUNT(*) > 3             -- ← filtre les GROUPES, après le regroupement
+ORDER BY nbDemandes DESC;
+```
+
+| Clause | Filtre quoi | Peut utiliser une agrégation ? |
+| --- | --- | --- |
+| `WHERE` | Les lignes, **avant** le `GROUP BY` | Non |
+| `HAVING` | Les groupes, **après** le `GROUP BY` | Oui |
+
+**L'ordre d'exécution logique d'une requête** — différent de l'ordre d'écriture, et c'est ce qui explique le point précédent :
+
+```
+FROM → JOIN → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT
+```
+
+C'est pour cette raison qu'un alias défini dans le `SELECT` n'est pas utilisable dans le `WHERE` : au moment où le `WHERE` s'exécute, le `SELECT` n'a pas encore eu lieu.
+
+---
+
+### 9.4 Les sous-requêtes
+
+Une **sous-requête** est une requête imbriquée dans une autre.
+
+```sql
+-- Sous-requête scalaire : les salariés au-dessus de la moyenne des soldes
+SELECT nom, soldeConges
+FROM Salarie
+WHERE soldeConges > (SELECT AVG(soldeConges) FROM Salarie);
+
+-- Sous-requête de liste avec IN
+SELECT nom FROM Salarie
+WHERE idSalarie IN (SELECT idSalarie FROM Demande WHERE statut = 'EN_ATTENTE');
+
+-- Sous-requête corrélée avec EXISTS : dépend de la ligne courante
+SELECT s.nom
+FROM Salarie s
+WHERE EXISTS (SELECT 1 FROM Demande d
+              WHERE d.idSalarie = s.idSalarie AND d.statut = 'EN_ATTENTE');
+
+-- Sous-requête dans le FROM (table dérivée)
+SELECT nom, totalJours
+FROM (SELECT idSalarie, SUM(nbJours) AS totalJours
+      FROM Demande GROUP BY idSalarie) AS bilan
+JOIN Salarie s ON s.idSalarie = bilan.idSalarie
+WHERE totalJours > 20;
+```
+
+**`IN` ou `EXISTS` ?** `EXISTS` s'arrête à la première correspondance trouvée, ce qui le rend souvent préférable sur de gros volumes. `IN` reste plus lisible sur une petite liste de valeurs. Et attention : `NOT IN` renvoie un résultat vide si la sous-requête contient un seul `NULL` — `NOT EXISTS` n'a pas ce défaut.
+
+**Sous-requête ou jointure ?** Une jointure est en général plus rapide et plus lisible pour ramener des colonnes des deux tables. La sous-requête s'impose quand on a besoin d'un calcul intermédiaire (une moyenne, un maximum) avant de filtrer.
+
+---
+
+### 9.5 Le DDL et les contraintes
+
+Le **DDL** définit la structure. Au-delà du `CREATE TABLE` vu au chapitre Modélisation :
+
+```sql
+-- Ajouter une colonne à une table existante
+ALTER TABLE Salarie ADD dateEmbauche DATE NULL;
+
+-- Modifier le type d'une colonne
+ALTER TABLE Salarie ALTER COLUMN nom NVARCHAR(80) NOT NULL;
+
+-- Ajouter une contrainte nommée (le nom facilite le diagnostic d'erreur)
+ALTER TABLE Demande
+  ADD CONSTRAINT CK_Demande_Dates CHECK (dateFin >= dateDebut);
+
+-- Supprimer une colonne, puis une table
+ALTER TABLE Salarie DROP COLUMN dateEmbauche;
+DROP TABLE LogDemande;
+```
+
+**Les cinq contraintes d'intégrité :**
+
+| Contrainte | Garantit |
+| --- | --- |
+| `PRIMARY KEY` | Identifiant unique et non nul de la ligne |
+| `FOREIGN KEY` | La valeur existe dans la table référencée (intégrité référentielle) |
+| `UNIQUE` | Pas de doublon sur la colonne (un e-mail par salarié) |
+| `NOT NULL` | La valeur est obligatoire |
+| `CHECK` | Une règle métier exprimée en SQL (`soldeConges >= 0`) |
+
+**Le comportement en cascade :**
+
+```sql
+CREATE TABLE Demande (
+  idDemande INT PRIMARY KEY IDENTITY,
+  idSalarie INT NOT NULL,
+  FOREIGN KEY (idSalarie) REFERENCES Salarie(idSalarie)
+    ON DELETE CASCADE      -- supprimer un salarié supprime ses demandes
+    ON UPDATE NO ACTION
+);
+```
+
+| Option | Effet à la suppression du parent |
+| --- | --- |
+| `NO ACTION` / `RESTRICT` | La suppression est refusée s'il reste des enfants (comportement par défaut) |
+| `CASCADE` | Les enfants sont supprimés avec le parent |
+| `SET NULL` | La clé étrangère des enfants passe à `NULL` (la colonne doit l'autoriser) |
+
+`CASCADE` est pratique mais dangereux : une suppression anodine peut vider une partie de la base en chaîne. Pour des données à valeur légale ou comptable, on lui préfère la **suppression logique** — une colonne `dateSuppression` ou `actif`, et les lignes restent en base.
+
+---
+
+### 9.6 Le DCL — gérer les droits
+
+Le **DCL** contrôle qui a le droit de faire quoi. C'est la traduction en base du principe du moindre privilège.
+
+```sql
+-- Le compte applicatif ne peut que lire et écrire les données
+GRANT SELECT, INSERT, UPDATE, DELETE ON Demande TO app_congeapp;
+
+-- Il n'a aucun droit de structure : pas de DROP, pas de CREATE
+REVOKE ALTER ON Demande FROM app_congeapp;
+
+-- Un compte de lecture seule pour les rapports
+GRANT SELECT ON VueDemandesEnAttente TO app_reporting;
+```
+
+Un compte applicatif qui possède les droits d'administration transforme une injection SQL réussie en compromission totale de la base. Séparer les comptes limite les dégâts.
+
+---
+
+### 9.7 Transactions et propriétés ACID
 
 Une **transaction** regroupe plusieurs opérations en un bloc « tout ou rien ». Voir le chapitre Modélisation des données pour le détail des propriétés ACID.
 
@@ -69,7 +252,7 @@ COMMIT; -- valide les deux opérations
 
 ---
 
-### 9.4 Les index
+### 9.8 Les index
 
 Un index est une structure qui **accélère les recherches** sur les colonnes fréquemment filtrées ou jointes.
 
@@ -82,7 +265,7 @@ CREATE INDEX IX_Demande_Statut    ON Demande(statut);
 
 ---
 
-### 9.5 Les vues
+### 9.9 Les vues
 
 Une **vue** est une **requête stockée** que l'on peut interroger comme une table. Elle ne stocke pas de données — elle les calcule à chaque appel.
 
@@ -108,7 +291,7 @@ DROP VIEW VueDemandesEnAttente;
 
 ---
 
-### 9.6 Les procédures stockées
+### 9.10 Les procédures stockées
 
 Une **procédure stockée** est un **bloc de code SQL** enregistré dans la base de données et exécutable à la demande. Elle peut accepter des paramètres et contenir de la logique (conditions, boucles).
 
@@ -145,7 +328,7 @@ EXEC ValiderDemande @idDemande = 7, @idManager = 3;
 
 ---
 
-### 9.7 Les triggers (déclencheurs)
+### 9.11 Les triggers (déclencheurs)
 
 Un **trigger** est un bloc SQL qui s'exécute **automatiquement** en réaction à un événement sur une table (`INSERT`, `UPDATE`, `DELETE`).
 
@@ -179,7 +362,7 @@ END;
 
 ---
 
-### 9.8 Les ORM — Entity Framework Core
+### 9.12 Les ORM — Entity Framework Core
 
 Un **ORM** (*Object-Relational Mapping*) fait le pont entre les objets C# et les tables SQL.
 
@@ -199,6 +382,79 @@ await _db.SaveChangesAsync();
 demande.Statut = "VALIDEE";
 await _db.SaveChangesAsync();
 ```
+
+---
+
+### 9.13 Les bases NoSQL
+
+Le référentiel CDA demande de savoir accéder aux données **SQL et NoSQL**. *NoSQL* signifie « *Not Only SQL* » : ce sont des bases qui abandonnent volontairement le modèle relationnel (tables, schéma fixe, jointures) pour gagner en souplesse de structure ou en montée en charge horizontale.
+
+**Les quatre familles :**
+
+| Famille | Modèle de données | Représentants | Cas d'usage typique |
+| --- | --- | --- | --- |
+| **Document** | Des documents JSON, structure libre | MongoDB, CouchDB | Catalogue produit, contenus hétérogènes |
+| **Clé-valeur** | Une clé, une valeur | Redis, Memcached | Cache, session, file d'attente |
+| **Colonnes** | Familles de colonnes, très gros volumes | Cassandra, HBase | Séries temporelles, journaux massifs |
+| **Graphe** | Des nœuds et des relations | Neo4j | Réseau social, moteur de recommandation |
+
+**Le vocabulaire, comparé au relationnel :**
+
+| Relationnel | Document (MongoDB) |
+| --- | --- |
+| Table | Collection |
+| Ligne | Document |
+| Colonne | Champ |
+| Jointure | Imbrication (ou référence + seconde requête) |
+| Schéma imposé | Schéma libre, porté par l'application |
+
+**La même donnée, des deux côtés :**
+
+```sql
+-- Relationnel : les données sont réparties dans deux tables normalisées
+SELECT s.nom, d.dateDebut FROM Salarie s JOIN Demande d ON d.idSalarie = s.idSalarie;
+```
+
+```javascript
+// Document : le salarié embarque ses demandes, une seule lecture suffit
+{
+  "_id": ObjectId("..."),
+  "nom": "Dumont",
+  "email": "a.dumont@ent.fr",
+  "soldeConges": 25,
+  "demandes": [
+    { "dateDebut": "2026-07-01", "dateFin": "2026-07-15", "statut": "VALIDEE" },
+    { "dateDebut": "2026-09-05", "dateFin": "2026-09-08", "statut": "EN_ATTENTE" }
+  ]
+}
+
+// Les opérations de base
+db.salaries.find({ "demandes.statut": "EN_ATTENTE" });
+db.salaries.updateOne({ _id: id }, { $push: { demandes: nouvelleDemande } });
+db.salaries.aggregate([
+  { $unwind: "$demandes" },
+  { $group: { _id: "$nom", total: { $sum: 1 } } }
+]);
+```
+
+**ACID contre BASE :**
+
+Là où le relationnel garantit ACID, beaucoup de bases NoSQL distribuées proposent le compromis **BASE** — *Basically Available, Soft state, Eventually consistent* : la donnée finit par être cohérente sur tous les nœuds, mais pas à l'instant de l'écriture. C'est acceptable pour un compteur de vues, pas pour un solde de congés.
+
+Ce compromis vient du **théorème CAP** : un système distribué doit choisir deux propriétés sur trois entre **C**ohérence, **A**vailability (disponibilité) et **P**artition tolerance (tolérance au découpage réseau). Comme la tolérance aux pannes réseau est imposée dès qu'on distribue, le vrai choix se joue entre cohérence et disponibilité.
+
+**Comment choisir :**
+
+| Prendre du relationnel quand… | Prendre du NoSQL quand… |
+| --- | --- |
+| Les données sont fortement liées entre elles | Les documents sont autonomes, peu liés |
+| Les transactions multi-tables sont critiques | La cohérence immédiate n'est pas vitale |
+| Le schéma est stable et connu | La structure varie d'un enregistrement à l'autre |
+| Le volume tient sur un serveur | Il faut répartir sur beaucoup de machines |
+
+Pour CongeApp — des soldes, des transactions, des données très liées — le relationnel est le bon choix. Le NoSQL y aurait quand même sa place en **complément** : Redis pour stocker les sessions et mettre en cache le planning d'équipe. Les deux modèles cohabitent très bien dans une même application ; c'est ce qu'on appelle la **persistance polyglotte**.
+
+> **Sécurité côté NoSQL :** l'injection existe aussi. Passer un objet JSON reçu du client directement dans un filtre MongoDB permet d'injecter des opérateurs (`{"$ne": null}` pour contourner une vérification de mot de passe). Le réflexe est le même qu'en SQL : valider et typer les entrées, ne pas construire une requête à partir d'un objet brut.
 
 ---
 

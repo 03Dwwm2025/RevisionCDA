@@ -85,6 +85,54 @@ Kanban est une autre méthode agile, plus souple que Scrum : pas de sprints, pas
 
 ---
 
+### Estimer et suivre l'avancement
+
+**Pourquoi on n'estime pas en heures.** Un développeur expérimenté et un débutant ne mettent pas le même temps sur la même tâche, mais ils s'accordent en général sur le fait qu'elle est *deux fois plus grosse* que la précédente. On estime donc une **taille relative**, pas une durée.
+
+**Les points de complexité (*story points*)** mesurent l'effort en tenant compte de trois choses à la fois : le volume de travail, la complexité technique et l'incertitude. On utilise souvent une suite de Fibonacci (1, 2, 3, 5, 8, 13) — l'écart qui grandit traduit le fait qu'une grosse story est aussi une story mal connue.
+
+| Story | Points | Pourquoi |
+| --- | --- | --- |
+| Ajouter un champ « motif » au formulaire | 1 | Connu, isolé, sans règle métier |
+| Déposer une demande avec contrôle du solde | 5 | Plusieurs couches, règles métier, cas d'erreur |
+| Export PDF du planning d'équipe | 8 | Nouvelle bibliothèque, mise en page, incertitude |
+
+**Le planning poker** est la technique d'estimation collective : chacun choisit sa carte en secret, on révèle en même temps. Les écarts sont le vrai produit de l'exercice — quand l'un dit 2 et l'autre 13, c'est qu'ils n'ont pas compris la même chose, et la discussion vaut plus que le chiffre final.
+
+**La vélocité** est le nombre de points réellement terminés par sprint. Après trois ou quatre sprints, elle devient un outil de prévision : une équipe à 30 points par sprint et un reste-à-faire de 120 points a encore quatre sprints devant elle. La vélocité sert à **prévoir**, pas à comparer des équipes entre elles ni à évaluer les personnes — dès qu'elle devient un objectif, elle est gonflée et perd sa valeur.
+
+**Le graphe d'avancement (*burndown chart*)** montre le reste-à-faire jour après jour :
+
+```
+points
+restants
+  40 │●
+     │  ╲ ● ← courbe réelle : au-dessus de l'idéale = on est en retard
+  30 │    ╲  ●
+     │ ╲    ╲
+  20 │   ╲    ●●
+     │     ╲     ╲
+  10 │       ╲     ●
+     │         ╲     ╲●
+   0 └────────────────────► jours du sprint
+     J1                J10
+        ╲ = trajectoire idéale
+```
+
+Un palier horizontal signale une tâche bloquée ; une chute brutale le dernier jour signale que « terminé » a été déclaré trop tard, et donc que le travail n'était pas découpé assez fin.
+
+**La définition de terminé (*Definition of Done*)** est la liste de conditions qu'une story doit remplir pour être considérée comme faite. Elle est commune à toute l'équipe et écrite une fois pour toutes :
+
+- le code est revu et fusionné dans `main` ;
+- les tests unitaires sont écrits et la CI est verte ;
+- les critères d'acceptation de la story sont vérifiés ;
+- la documentation est à jour ;
+- la fonctionnalité est déployée en préproduction.
+
+Sans elle, « terminé » veut dire « ça marche sur ma machine » — et la dette s'accumule sprint après sprint.
+
+---
+
 ### Waterfall vs Agile — en résumé
 
 | Critère | Waterfall | Agile |

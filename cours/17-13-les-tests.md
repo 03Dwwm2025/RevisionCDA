@@ -143,7 +143,87 @@ Viser 100 % de couverture n'est donc pas un objectif en soi. Ce qui compte, c'es
 
 ---
 
-### 13.7 SAST, DAST et la sécurité dans les tests
+### 13.7 Le plan de tests, le cahier de recettes et les jeux d'essai
+
+Les tests automatisés ne couvrent qu'une partie du travail attendu. Le référentiel parle de **préparer et exécuter les plans de tests** : c'est un livrable documentaire, avec son vocabulaire.
+
+| Document | Ce qu'il contient | Qui l'utilise |
+| --- | --- | --- |
+| **Plan de tests** | La stratégie : quoi tester, à quels niveaux, avec quels outils, dans quels environnements, avec quels critères d'arrêt | L'équipe de développement |
+| **Cahier de recettes** | La liste des scénarios fonctionnels à dérouler, avec pour chacun les étapes, la donnée d'entrée et le résultat attendu | Le client, lors de la recette |
+| **Jeu d'essai** | Le lot de données préparé pour exécuter les tests : cas normaux, cas limites, cas d'erreur | Celui qui exécute les tests |
+| **Procès-verbal de recette** | Le compte rendu signé : ce qui est passé, ce qui a échoué, ce qui est accepté avec réserve | Le client et le prestataire |
+
+**La trame d'un cas de test :**
+
+| Champ | Exemple |
+| --- | --- |
+| Identifiant | TC-012 |
+| Objectif | Refuser une demande dépassant le solde |
+| Prérequis | Salarié « Dumont » connecté, solde = 3 jours |
+| Étapes | 1. Ouvrir « Nouvelle demande » — 2. Saisir du 01/07 au 10/07 — 3. Valider |
+| Résultat attendu | Message « Solde insuffisant (3 jours disponibles) », aucune demande créée |
+| Résultat obtenu | *(rempli à l'exécution)* |
+| Verdict | Conforme / Non conforme |
+
+**Le jeu d'essai — l'erreur courante est de ne couvrir que le cas nominal :**
+
+| Catégorie | Exemple pour une demande de congé |
+| --- | --- |
+| Cas nominal | Demande de 5 jours, solde de 25 |
+| Cas limite | Demande de exactement 25 jours avec un solde de 25 ; demande d'un seul jour |
+| Cas d'erreur | Date de fin avant la date de début ; solde insuffisant ; chevauchement |
+| Cas interdit | Un salarié tente de valider sa propre demande |
+| Donnée hostile | `' OR '1'='1` dans le motif ; `<script>` dans le nom |
+
+Les **critères d'acceptation** rédigés en Given/When/Then à l'analyse des besoins deviennent directement des cas de test : c'est le même document, vu à deux moments du projet.
+
+**Le vocabulaire de la recette :**
+
+- **Tests fonctionnels** : on vérifie que l'application fait ce qui est écrit dans le cahier des charges. Boîte noire — on ne regarde pas le code.
+- **Tests de non-régression** : on rejoue les tests déjà passés pour vérifier qu'une nouvelle version n'a rien cassé. C'est exactement ce que fait la CI à chaque commit — automatiser ces tests est ce qui rend le rythme de livraison tenable.
+- **Recette (ou VABF, vérification d'aptitude au bon fonctionnement)** : la campagne de validation menée avec le client avant la mise en production.
+- **Tests de bout en bout (E2E)** : le pilotage automatisé d'un vrai navigateur, qui rejoue le parcours utilisateur complet.
+
+```javascript
+// Playwright — un test de bout en bout
+test('un salarié dépose une demande et la voit apparaître', async ({ page }) => {
+  await page.goto('https://congeapp.local/connexion');
+  await page.fill('#email', 'a.dumont@ent.fr');
+  await page.fill('#motDePasse', 'MotDePasse1');
+  await page.click('button[type=submit]');
+
+  await page.click('text=Nouvelle demande');
+  await page.fill('#dateDebut', '2026-07-01');
+  await page.fill('#dateFin', '2026-07-15');
+  await page.click('text=Envoyer');
+
+  await expect(page.locator('.liste-demandes')).toContainText('En attente');
+});
+```
+
+Outils courants : **Playwright**, **Cypress**, **Selenium**. Ils sont lents et fragiles — on en garde peu, sur les parcours vitaux uniquement (se connecter, déposer, valider).
+
+---
+
+### 13.8 Les tests non fonctionnels
+
+Les besoins non-fonctionnels définis à l'analyse se vérifient eux aussi.
+
+| Type de test | Ce qu'il vérifie | Outil |
+| --- | --- | --- |
+| **Charge** | Le comportement au volume attendu (100 utilisateurs simultanés) | k6, JMeter, Gatling |
+| **Stress** | Le point de rupture — jusqu'où ça tient, et comment ça casse | k6, JMeter |
+| **Performance** | Les temps de réponse par rapport à l'objectif (p95 < 500 ms) | k6, Lighthouse |
+| **Accessibilité** | La conformité RGAA/WCAG | axe, Lighthouse, Wave |
+| **Compatibilité** | Le rendu sur les navigateurs et tailles d'écran ciblés | BrowserStack, outils du navigateur |
+| **Sécurité** | Les failles connues | OWASP ZAP, SAST/DAST (section suivante) |
+
+Un test de charge qui montre que l'application tient 100 utilisateurs simultanés est un argument concret dans un dossier de projet — bien plus qu'une affirmation de principe.
+
+---
+
+### 13.9 SAST, DAST et la sécurité dans les tests
 
 Les tests fonctionnels ne suffisent pas à garantir la sécurité. Deux types d'outils complètent le dispositif :
 

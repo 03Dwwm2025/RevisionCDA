@@ -46,7 +46,7 @@ Le monitoring surveille l'état de l'application en **temps réel** et déclench
 | **Espace disque** | > 80 % rempli | Le disque va-t-il se remplir ? |
 | **Erreurs 401/403** | Pic inhabituel | Tentative d'intrusion ? |
 
-> *p95 (99e percentile) = le temps de réponse que 95 % des requêtes ne dépassent pas. Mieux que la moyenne : il capte les lenteurs ressenties par les utilisateurs.*
+> *p95 (95e percentile) = le temps de réponse que 95 % des requêtes ne dépassent pas. Mieux que la moyenne : il capte les lenteurs ressenties par les utilisateurs, que la moyenne dilue.*
 
 **Stack de monitoring open-source :**
 
@@ -144,6 +144,36 @@ L'objectif est d'apprendre et d'améliorer les processus, pas de punir. Un bon p
 | **Cause racine** | Pourquoi c'est arrivé (technique + processus) |
 | **Impact** | Durée, nombre d'utilisateurs affectés, données perdues |
 | **Actions correctives** | Ce qu'on va faire pour éviter la récidive (avec responsable et date) |
+
+---
+
+### 18.7 Les quatre types de maintenance
+
+Une fois l'application en production, le travail continue. On classe la maintenance en quatre catégories — c'est une question de cours classique.
+
+| Type | Déclencheur | Exemple sur CongeApp | Part typique du budget |
+| --- | --- | --- | --- |
+| **Corrective** | Un défaut constaté | Le solde s'affiche en négatif après une annulation | ~20 % |
+| **Évolutive** | Un nouveau besoin métier | Ajouter l'export du planning en PDF | ~50 % |
+| **Adaptative** | Un changement dans l'environnement technique ou légal | Migrer de .NET 8 vers .NET 10, se mettre en conformité avec une nouvelle règle RGPD | ~20 % |
+| **Préventive** | Anticiper une panne avant qu'elle arrive | Ajouter un index avant que la table ne devienne trop lente, purger les journaux avant saturation du disque | ~10 % |
+
+Deux points que le jury aime entendre :
+
+- **La maintenance coûte plus cher que le développement initial.** Sur la durée de vie d'une application, l'écriture de la première version est minoritaire dans le coût total. C'est l'argument économique derrière le code propre, les tests et la documentation : ils ne servent pas à celui qui écrit, ils servent à celui qui maintient — souvent la même personne, six mois plus tard.
+- **La dette technique** est le coût différé d'un raccourci pris aujourd'hui. Elle n'est pas honteuse tant qu'elle est **consciente et tracée** : on note ce qu'on a bâclé et pourquoi. Elle devient dangereuse quand personne ne sait plus où elle est.
+
+**La maintenance corrective en pratique — le suivi d'anomalie :**
+
+| Champ | Contenu |
+| --- | --- |
+| Sévérité | Bloquante / majeure / mineure / cosmétique |
+| Environnement | Production, navigateur, version |
+| Étapes de reproduction | Numérotées, reproductibles par un tiers |
+| Comportement attendu / observé | Les deux, côte à côte |
+| Correction | Le commit et la version qui corrigent |
+
+Une anomalie corrigée devrait donner un **test de non-régression** : le bug est d'abord reproduit par un test qui échoue, puis le correctif fait passer ce test. C'est ce qui garantit qu'il ne reviendra pas.
 
 ---
 

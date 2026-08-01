@@ -113,6 +113,22 @@ Le **Dockerfile** décrit la construction d'une image, instruction par instructi
 
 > **`COPY` vs `ADD` :** préférer `COPY` (comportement prévisible). Utiliser `ADD` uniquement si on a besoin de la décompression automatique d'archives tar.
 
+**Le `.dockerignore` — indispensable :**
+
+Sans lui, `COPY . .` embarque `node_modules`, le dossier `.git`, les fichiers `.env` et tout le reste dans l'image : build plus lent, image plus lourde, et surtout **secrets embarqués**.
+
+```
+node_modules
+dist
+.git
+.env
+*.log
+Dockerfile
+.dockerignore
+```
+
+Même rôle et même syntaxe que le `.gitignore`, mais pour le contexte de build Docker.
+
 **Le build multi-stage** sépare l'environnement de compilation de l'image finale :
 
 ```dockerfile
@@ -125,12 +141,15 @@ COPY . .
 RUN npm run build             # génère le dossier dist/
 
 # Stage 2 : image de prod (Nginx léger, sans Node)
-FROM nginx:alpine
+FROM nginxinc/nginx-unprivileged:alpine   # variante qui tourne sans root
 COPY --from=builder /app/dist /usr/share/nginx/html
-USER nginx                    # ne pas tourner en root
-EXPOSE 80
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]
 ```
+
+L'image finale ne contient ni Node, ni les dépendances de développement, ni le code source — seulement les fichiers statiques compilés et Nginx. On passe typiquement de plusieurs centaines de méga-octets à quelques dizaines.
+
+> **Le piège du non-root avec Nginx :** ajouter `USER nginx` à l'image officielle `nginx:alpine` ne suffit pas — le processus maître n'a pas le droit d'écrire `/var/run/nginx.pid` ni `/var/cache/nginx`, et le conteneur s'arrête au démarrage. Soit on utilise l'image `nginxinc/nginx-unprivileged` (qui écoute sur 8080), soit on ajoute les `chown` nécessaires à la main. Pour une image applicative classique (Node, .NET), `USER` seul suffit.
 
 ---
 

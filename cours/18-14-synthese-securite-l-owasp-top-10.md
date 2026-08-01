@@ -29,21 +29,21 @@ GET /api/demandes/42
 Si l'API retourne la demande n°42 sans vérifier que l'utilisateur connecté en est bien le propriétaire, n'importe quel salarié peut voir les demandes de tous les autres en changeant l'id dans l'URL.
 
 **Comment s'en protéger :**
-```csharp
-// ❌ Vulnérable : retourne la demande sans vérification
-public IActionResult Get(int id) => Ok(_repo.GetParId(id));
+```javascript
+// ❌ Vulnérable : renvoie la demande sans vérifier à qui elle appartient
+app.get('/api/demandes/:id', async (req, res) => {
+  res.json(await depot.parId(req.params.id));
+});
 
-// ✅ Protégé : vérifie que la demande appartient à l'utilisateur connecté
-public IActionResult Get(int id)
-{
-    var demande = _repo.GetParId(id);
-    if (demande is null) return NotFound();
+// ✅ Protégé : on compare le propriétaire de la ressource à l'utilisateur connecté
+app.get('/api/demandes/:id', async (req, res) => {
+  const demande = await depot.parId(req.params.id);
+  if (!demande) return res.sendStatus(404);
 
-    int idConnecte = int.Parse(User.FindFirst("sub")!.Value);
-    if (demande.IdSalarie != idConnecte) return Forbid(); // 403
+  if (demande.idSalarie !== req.utilisateur.id) return res.sendStatus(403);
 
-    return Ok(demande);
-}
+  res.json(demande);
+});
 ```
 
 **Règle :** toujours vérifier les droits côté serveur, à chaque requête. Ne jamais se fier au client.
@@ -63,14 +63,16 @@ Des données sensibles sont exposées faute de chiffrement adéquat.
 - **HTTPS** sur toutes les communications (Let's Encrypt, certificat TLS)
 - **Hachage lent** des mots de passe : bcrypt, Argon2, PBKDF2 — avec un sel unique par utilisateur
 
-```csharp
-// ❌ Ne jamais faire ça
-string hashMd5 = MD5.HashData(Encoding.UTF8.GetBytes(motDePasse)).ToString();
+```javascript
+// ❌ Ne jamais faire ça : MD5 et SHA-1 sont conçus pour être rapides
+const empreinte = crypto.createHash('md5').update(motDePasse).digest('hex');
 
-// ✅ Hachage avec BCrypt (lent = résistant au brute force)
-string hash = BCrypt.Net.BCrypt.HashPassword(motDePasse);
-bool ok     = BCrypt.Net.BCrypt.Verify(saisie, hashStocke);
+// ✅ Algorithme lent, avec sel intégré et coût réglable
+const empreinte = await bcrypt.hash(motDePasse, 12);   // 12 = facteur de coût
+const valide    = await bcrypt.compare(saisie, empreinteStockee);
 ```
+
+Le facteur de coût se relève à mesure que le matériel progresse : c'est le seul paramètre à faire évoluer dans le temps. Les équivalents existent partout — bcrypt, Argon2 ou PBKDF2, quel que soit le langage.
 
 ---
 
@@ -86,16 +88,18 @@ Requête construite : SELECT * FROM Salarie WHERE email = '' OR '1'='1'
 ```
 
 **Comment s'en protéger :**
-```csharp
-// ❌ Vulnérable : concaténation directe
-string sql = "SELECT * FROM Salarie WHERE email = '" + emailSaisi + "'";
+```javascript
+// ❌ Vulnérable : la saisie devient une partie de la requête
+const sql = `SELECT * FROM Salarie WHERE email = '${emailSaisi}'`;
+await db.query(sql);
 
-// ✅ Requête paramétrée : la saisie est traitée comme une valeur, jamais comme du code
-string sql = "SELECT * FROM Salarie WHERE email = @email";
-cmd.Parameters.AddWithValue("@email", emailSaisi);
+// ✅ Requête paramétrée : la saisie est transmise à part, traitée comme une valeur
+await db.query('SELECT * FROM Salarie WHERE email = $1', [emailSaisi]);
 ```
 
-Un ORM comme Entity Framework Core paramètre automatiquement toutes les requêtes.
+Le marqueur change selon le moteur (`$1`, `?` ou `:email`), le principe est le même : le texte de la requête est figé, les valeurs voyagent séparément.
+
+Un ORM paramètre automatiquement toutes les requêtes qu'il génère — c'est une raison de plus de lui confier l'accès aux données plutôt que d'assembler du SQL à la main.
 
 **Le XSS fait partie d'A03 depuis 2021.** L'injection ne se limite pas au SQL : injecter du JavaScript dans une page est le même mécanisme, avec un autre interpréteur.
 
@@ -122,7 +126,7 @@ zone.textContent = demande.motif; // → affiche les balises littéralement
 
 **Les trois lignes de défense contre le XSS :**
 
-1. **Échapper en sortie** — c'est la protection principale. `textContent` côté JavaScript ; Razor (`@model.Motif`) et les frameworks modernes (React, Vue, Angular) échappent par défaut. La faille revient dès qu'on force le passage : `innerHTML`, `dangerouslySetInnerHTML`, `v-html`, `@Html.Raw`.
+1. **Échapper en sortie** — c'est la protection principale. `textContent` en JavaScript pur ; les moteurs de gabarit et les cadriciels d'interface modernes échappent par défaut. La faille revient dès qu'on force le passage : toute fonction dont le nom contient « HTML » ou « raw » attend une donnée de confiance, et une saisie utilisateur n'en est pas une.
 2. **Valider en entrée** — refuser ce qui n'a rien à faire là, et si du HTML riche est réellement nécessaire, le nettoyer avec une bibliothèque dédiée (DOMPurify, HtmlSanitizer) plutôt qu'avec une expression régulière maison.
 3. **Content-Security-Policy** — un en-tête qui interdit au navigateur d'exécuter du script en ligne. C'est le filet quand les deux premières défenses ont laissé passer quelque chose.
 
@@ -166,11 +170,21 @@ add_header X-Frame-Options DENY;
 add_header Content-Security-Policy "default-src 'self'";
 ```
 
-```csharp
-// Désactiver les détails d'erreur en production
-if (!app.Environment.IsDevelopment())
-    app.UseExceptionHandler("/error"); // message générique, pas de stack trace
+```javascript
+// Traitement global des erreurs : détaillé en développement, muet en production
+app.use((err, req, res, next) => {
+  const reference = genererIdentifiant();
+  logger.error('Erreur non gérée', { reference, pile: err.stack });
+
+  res.status(500).json(
+    process.env.NODE_ENV === 'production'
+      ? { message: 'Une erreur est survenue.', reference }   // rien de technique
+      : { message: err.message, pile: err.stack },
+  );
+});
 ```
+
+L'identifiant de corrélation fait le pont : l'utilisateur signale la référence, on retrouve la trace complète dans les journaux.
 
 ---
 
@@ -292,17 +306,19 @@ L'attaquant n'a pas eu accès au cookie — il n'en a pas eu besoin. Il a simple
 | **`SameSite` sur le cookie** | `SameSite=Strict` ou `Lax` empêche le navigateur d'envoyer le cookie sur une requête venue d'un autre site. Défense par défaut des navigateurs modernes. |
 | **En-tête `Authorization`** | Un jeton JWT envoyé dans un en-tête n'est **pas** attaché automatiquement par le navigateur : le code de l'attaquant devrait le lire, ce que la politique de même origine interdit. |
 
-```csharp
-// ASP.NET Core : jeton anti-CSRF sur les actions sensibles
-[HttpPost]
-[ValidateAntiForgeryToken]
-public IActionResult Valider(int id) { /* ... */ }
+```javascript
+// Le cookie de session, verrouillé sur les trois axes
+res.cookie('session', jeton, {
+  httpOnly: true,     // illisible en JavaScript → un XSS ne peut pas le voler
+  secure:   true,     // transmis uniquement en HTTPS
+  sameSite: 'strict', // jamais envoyé sur une requête venue d'un autre site
+});
 
-// Et sur le cookie de session
-options.Cookie.SameSite     = SameSiteMode.Strict;
-options.Cookie.HttpOnly     = true;
-options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+// Et un jeton anti-CSRF vérifié sur les actions sensibles
+app.post('/api/demandes/:id/valider', verifierJetonCsrf, (req, res) => { /* ... */ });
 ```
+
+Les trois attributs du cookie couvrent trois menaces différentes, et aucun ne remplace les autres. Tous les cadriciels exposent ces réglages et un mécanisme de jeton anti-CSRF prêt à l'emploi.
 
 **Le tableau qui résume XSS et CSRF — la question piège du jury :**
 

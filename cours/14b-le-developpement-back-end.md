@@ -4,338 +4,283 @@ Le **back-end** est la partie de l'application qui s'exécute côté serveur. Il
 
 ```
 Navigateur (front-end) ──► Serveur back-end ──► Base de données
-     (HTML/CSS/JS)          (ASP.NET Core)          (SQL)
+     (HTML/CSS/JS)          (API HTTP)              (SQL)
 ```
+
+> **Les exemples sont en JavaScript.** Les mécanismes présentés ici — validation, chaîne de traitement, configuration, journalisation — existent à l'identique dans tous les écosystèmes serveur, sous des noms parfois différents.
 
 ---
 
 ### 11bis.1 Validation des données côté serveur
 
-La validation serveur est **la seule validation qui compte pour la sécurité**. Celle du front-end est du confort UX — elle peut être contournée.
+La validation serveur est **la seule validation qui compte pour la sécurité**. Celle du front-end est du confort d'usage — elle se contourne avec un client HTTP en ligne de commande.
 
-**Data Annotations** — attributs de validation sur les DTO :
+**Déclarer les règles à côté du modèle d'entrée**, plutôt que de les éparpiller dans le code :
 
-```csharp
-public class DemandeCreationDto
-{
-    [Required(ErrorMessage = "La date de début est obligatoire.")]
-    public DateOnly DateDebut { get; set; }
-
-    [Required(ErrorMessage = "La date de fin est obligatoire.")]
-    public DateOnly DateFin { get; set; }
-}
-
-public class InscriptionDto
-{
-    [Required]
-    [MaxLength(50, ErrorMessage = "Le nom ne peut pas dépasser 50 caractères.")]
-    public string Nom { get; set; } = "";
-
-    [Required]
-    [EmailAddress(ErrorMessage = "L'adresse e-mail est invalide.")]
-    public string Email { get; set; } = "";
-
-    [Required]
-    [MinLength(8, ErrorMessage = "Le mot de passe doit faire au moins 8 caractères.")]
-    [RegularExpression(@"^(?=.*[A-Z])(?=.*\d).+$",
-        ErrorMessage = "Le mot de passe doit contenir au moins une majuscule et un chiffre.")]
-    public string MotDePasse { get; set; } = "";
-
-    [Range(0, 100, ErrorMessage = "La valeur doit être entre 0 et 100.")]
-    public int SoldeConges { get; set; }
-}
+```javascript
+const schemaInscription = {
+  nom:         { requis: true, maxLongueur: 50 },
+  email:       { requis: true, format: 'email' },
+  motDePasse:  { requis: true, minLongueur: 8, motif: /^(?=.*[A-Z])(?=.*\d).+$/ },
+  soldeConges: { min: 0, max: 100 },
+};
 ```
 
-**Vérification dans le Controller :**
-
-```csharp
-[HttpPost]
-public IActionResult Creer([FromBody] InscriptionDto dto)
-{
-    if (!ModelState.IsValid)
-        return BadRequest(ModelState); // 400 avec les messages d'erreur
-
-    // Si on arrive ici, les données respectent toutes les annotations
-    var resultat = _service.Inscrire(dto);
-    return Ok(resultat);
-}
-```
-
-**Validation personnalisée (custom) :**
-
-```csharp
-// Attribut de validation réutilisable
-public class DateFuturAttribute : ValidationAttribute
-{
-    protected override ValidationResult? IsValid(object? value, ValidationContext ctx)
-    {
-        if (value is DateOnly date && date <= DateOnly.FromDateTime(DateTime.Today))
-            return new ValidationResult("La date doit être dans le futur.");
-        return ValidationResult.Success;
-    }
-}
-
-// Utilisation sur un DTO
-public class DemandeCreationDto
-{
-    [Required]
-    [DateFutur]
-    public DateOnly DateDebut { get; set; }
-}
-```
-
-**Tableau des principales Data Annotations :**
-
-| Attribut | Utilisation |
+| Règle | Ce qu'elle vérifie |
 | --- | --- |
-| `[Required]` | Champ obligatoire (non null, non vide) |
-| `[MaxLength(n)]` | Longueur maximale d'une chaîne |
-| `[MinLength(n)]` | Longueur minimale d'une chaîne |
-| `[Range(min, max)]` | Valeur numérique dans un intervalle |
-| `[EmailAddress]` | Format e-mail valide |
-| `[Url]` | Format URL valide |
-| `[RegularExpression(pattern)]` | Validation par expression régulière |
-| `[Compare("Champ")]` | Deux champs doivent être égaux (ex. confirmation MDP) |
+| `requis` | La valeur est présente et non vide |
+| `minLongueur` / `maxLongueur` | La taille d'une chaîne |
+| `min` / `max` | Un nombre dans un intervalle |
+| `format` | Un motif connu : adresse e-mail, URL, date |
+| `motif` | Une expression régulière, pour un besoin spécifique |
+| `identiqueA` | Deux champs égaux (confirmation de mot de passe) |
+
+Chaque écosystème a ses bibliothèques — annotations sur les propriétés en C# ou en Java, schémas déclaratifs en JavaScript, règles de formulaire en PHP. Le vocabulaire ci-dessus, lui, est commun.
+
+**Vérifier avant de déléguer :**
+
+```javascript
+app.post('/api/inscriptions', async (req, res) => {
+  const erreurs = valider(req.body, schemaInscription);
+  if (erreurs) return res.status(400).json({ erreurs });   // 400 + détail par champ
+
+  // Si on arrive ici, les données sont bien formées
+  const resultat = await serviceInscription.inscrire(req.body);
+  res.status(201).json(resultat);
+});
+```
+
+**Renvoyer le détail par champ** permet au front d'afficher l'erreur au bon endroit :
+
+```json
+{
+  "erreurs": {
+    "email": "L'adresse e-mail est invalide.",
+    "motDePasse": "Le mot de passe doit contenir au moins une majuscule et un chiffre."
+  }
+}
+```
+
+**Où s'arrête la validation ?** Dès qu'une règle a besoin d'autres données, elle change de nature :
+
+```javascript
+// Vérifiable avec la seule valeur reçue : c'est de la validation de format
+const dateDansLeFutur = (valeur) => new Date(valeur) > new Date();
+
+// Suppose d'aller lire le solde en base : c'est une règle de gestion.
+// Sa place est dans la couche métier, pas dans le schéma d'entrée.
+```
 
 ---
 
 ### 11bis.2 Gestion des erreurs et exceptions
 
-**Try/Catch dans le Service :**
+**Distinguer l'erreur métier de la panne technique.** Un solde insuffisant est un cas prévu, qui se renvoie comme un résultat. Une base injoignable est un imprévu, qui remonte comme exception.
 
-```csharp
-public Resultat Deposer(int idSalarie, DemandeCreationDto dto)
-{
-    try
-    {
-        if (dto.DateFin < dto.DateDebut)
-            return Resultat.Erreur("Dates incohérentes.");
+```javascript
+class ServiceConges {
+  async deposer(idSalarie, donnees) {
+    // Cas métier prévu : pas d'exception, un résultat explicite
+    if (donnees.dateFin < donnees.dateDebut) {
+      return Resultat.erreur('Dates incohérentes.');
+    }
 
-        _repo.Inserer(/* ... */);
-        return Resultat.Ok();
+    try {
+      await this.depot.inserer({ idSalarie, ...donnees });
+      return Resultat.ok();
+    } catch (err) {
+      // Panne technique : on journalise le détail, on renvoie un message neutre
+      logger.error('Échec de l’insertion en base', { idSalarie, erreur: err.message });
+      return Resultat.erreur('Erreur technique. Veuillez réessayer.');
     }
-    catch (SqlException ex)
-    {
-        _logger.LogError(ex, "Erreur SQL lors de l'insertion d'une demande");
-        return Resultat.Erreur("Erreur technique. Veuillez réessayer.");
-    }
+  }
 }
 ```
 
-**Middleware global de gestion des erreurs :**
+**Un traitement global des erreurs**, plutôt qu'un `try/catch` répété à chaque point d'entrée :
 
-Plutôt que de catcher les exceptions dans chaque endpoint, on configure un middleware global qui intercepte toutes les exceptions non gérées.
+```javascript
+// Placé en dernier : il capture ce que les étapes précédentes ont laissé passer
+app.use((err, req, res, next) => {
+  const reference = genererIdentifiant();
+  logger.error('Erreur non gérée', { reference, chemin: req.path, pile: err.stack });
 
-```csharp
-// Program.cs
-if (app.Environment.IsDevelopment())
-    app.UseDeveloperExceptionPage(); // stack trace visible en dev
-else
-    app.UseExceptionHandler("/error"); // page d'erreur générique en prod
+  res.status(500).json(
+    process.env.NODE_ENV === 'production'
+      ? { message: 'Une erreur est survenue.', reference }
+      : { message: err.message, pile: err.stack },
+  );
+});
 ```
 
-```csharp
-// Endpoint /error — renvoie un message générique sans détail technique
-[ApiController]
-public class ErrorController : ControllerBase
-{
-    [Route("/error")]
-    public IActionResult Error()
-    {
-        return Problem(
-            title: "Une erreur est survenue.",
-            statusCode: 500
-        );
-    }
-}
-```
+L'**identifiant de corrélation** est le pont entre l'utilisateur et les journaux : il signale « erreur ABC-123 », on retrouve la trace complète côté serveur. On donne le diagnostic sans rien exposer.
 
-**Problem Details (RFC 7807) :** format standard pour les erreurs d'API.
+**Un format d'erreur standard.** La RFC 9457 (qui remplace la RFC 7807) définit un corps de réponse commun pour les erreurs d'API :
 
 ```json
 {
-  "type": "https://tools.ietf.org/html/rfc7231#section-6.5.1",
-  "title": "Bad Request",
+  "type": "https://congeapp.fr/erreurs/solde-insuffisant",
+  "title": "Solde insuffisant",
   "status": 400,
-  "detail": "La date de fin doit être après la date de début.",
-  "traceId": "00-abc123..."
+  "detail": "Le solde disponible est de 3 jours, la demande en réclame 10.",
+  "instance": "/api/demandes"
 }
 ```
 
-ASP.NET Core renvoie automatiquement ce format avec `return BadRequest(...)` quand `[ApiController]` est présent.
+Adopter un format unique évite à chaque client de deviner la forme des erreurs. La plupart des cadriciels savent le produire.
 
 ---
 
-### 11bis.3 Le middleware ASP.NET Core
+### 11bis.3 La chaîne de traitement d'une requête
 
-Le **middleware** est un composant qui s'intercale dans le **pipeline de traitement des requêtes HTTP**. Chaque middleware peut :
-- Traiter la requête avant de passer au suivant
-- Court-circuiter le pipeline (ex. retourner 401 si non authentifié)
-- Traiter la réponse au retour
+Une requête HTTP traverse une **suite d'étapes** avant d'atteindre le code métier, puis les retraverse en sens inverse pour la réponse. Chaque étape peut traiter la requête, la laisser passer, ou l'arrêter net.
 
 ```
 Requête HTTP entrante
        │
   ┌────▼──────────────────────────────────────────┐
-  │  UseExceptionHandler (gestion globale erreurs) │
-  │  ┌────▼──────────────────────────────────────┐ │
-  │  │  UseHttpsRedirection (HTTP → HTTPS)        │ │
-  │  │  ┌────▼──────────────────────────────────┐│ │
-  │  │  │  UseAuthentication (JWT vérifié)       ││ │
-  │  │  │  ┌────▼──────────────────────────────┐││ │
-  │  │  │  │  UseAuthorization ([Authorize])    │││ │
-  │  │  │  │  ┌────▼──────────────────────────┐│││ │
-  │  │  │  │  │  MapControllers (endpoint)     ││││ │
-  │  │  │  │  └────────────────────────────────┘│││ │
-  │  │  │  └───────────────────────────────────┘││ │
-  │  │  └────────────────────────────────────────┘│ │
-  │  └──────────────────────────────────────────── │
-  └───────────────────────────────────────────────┘
+  │  Capture globale des erreurs                  │
+  │  ┌────▼──────────────────────────────────────┐│
+  │  │  Redirection vers HTTPS                    ││
+  │  │  ┌────▼──────────────────────────────────┐││
+  │  │  │  Contrôle d'origine (CORS)             │││
+  │  │  │  ┌────▼──────────────────────────────┐│││
+  │  │  │  │  Authentification : QUI ?          ││││
+  │  │  │  │  ┌────▼──────────────────────────┐││││
+  │  │  │  │  │  Autorisation : A LE DROIT ?  │││││
+  │  │  │  │  │  ┌────▼──────────────────────┐│││││
+  │  │  │  │  │  │  Traitement métier        ││││││
+  │  │  │  │  │  └───────────────────────────┘│││││
+  │  │  │  │  └──────────────────────────────┘││││
+  │  │  │  └─────────────────────────────────┘│││
+  │  │  └────────────────────────────────────┘││
+  │  └───────────────────────────────────────┘│
+  └──────────────────────────────────────────┘
        │
   Réponse HTTP sortante
 ```
 
-**Configuration du pipeline dans `Program.cs` :**
-
-```csharp
-var app = builder.Build();
-
-app.UseExceptionHandler("/error"); // 1. Gestion globale des erreurs
-app.UseHttpsRedirection();         // 2. Forcer HTTPS
-app.UseCors("PolitiqueCorsFront"); // 3. CORS
-app.UseAuthentication();           // 4. Identifier l'utilisateur (JWT)
-app.UseAuthorization();            // 5. Vérifier ses droits ([Authorize])
-app.MapControllers();              // 6. Router vers les controllers
-
-app.Run();
+```javascript
+app.use(gestionErreurs);        // 1. englobe tout le reste
+app.use(forcerHttps);           // 2. rediriger avant de traiter quoi que ce soit
+app.use(cors(politiqueCors));   // 3. contrôle d'origine
+app.use(authentifier);          // 4. identifier l'utilisateur
+app.use(autoriser);             // 5. vérifier ses droits
+app.use('/api', routeurApi);    // 6. router vers le traitement métier
 ```
 
-> **L'ordre des middlewares est crucial.** `UseAuthentication` doit venir avant `UseAuthorization`. `UseExceptionHandler` doit être en premier pour capturer les erreurs des autres middlewares.
+> **L'ordre est déterminant.** L'authentification doit précéder l'autorisation : contrôler des droits sur une identité encore inconnue laisse passer tout le monde. Et la capture des erreurs doit englober le reste, sinon une panne survenue plus loin lui échappe. Selon la technologie, ces étapes s'appellent middleware, filtres ou intercepteurs — la logique ne change pas.
 
 ---
 
 ### 11bis.4 Configuration et environnements
 
-**`appsettings.json`** — fichier de configuration principal (commité dans Git, sans secrets) :
+La même application doit tourner en local, en recette et en production **sans être recompilée** : seule la configuration change.
+
+**Ce qui est versionné**, parce que ce n'est pas secret :
 
 ```json
 {
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft": "Warning"
+  "journalisation": { "niveau": "information" },
+  "jwt": { "emetteur": "congeapp.fr", "dureeMinutes": 60 },
+  "pagination": { "tailleParDefaut": 20, "tailleMax": 100 }
+}
+```
+
+**Ce qui reste hors du dépôt** — les secrets, fournis par l'environnement d'exécution :
+
+```bash
+# Fichier .env sur le serveur : droits 600, non versionné
+JWT_SECRET=une-cle-longue-et-aleatoire
+DATABASE_URL=postgresql://app:motdepasse@db:5432/congeapp
+SMTP_PASSWORD=un-autre-secret
+```
+
+**Un `.env.example` versionné**, lui, documente ce qu'il faut renseigner sans livrer aucune valeur :
+
+```bash
+JWT_SECRET=
+DATABASE_URL=
+SMTP_PASSWORD=
+```
+
+**Les sources se superposent**, du plus général au plus spécifique :
+
+```
+fichier de base  <  fichier par environnement  <  variables d'environnement
+```
+
+Les variables d'environnement ont la priorité la plus haute : c'est ce qui permet de livrer la même image partout et de n'ajuster que la configuration. C'est l'un des principes de la méthode dite des douze facteurs.
+
+**Lire la configuration en un seul point** évite de disperser des accès aux variables dans tout le code :
+
+```javascript
+export const config = {
+  jwt: {
+    secret:       exigerVariable('JWT_SECRET'),  // absente → l'application refuse de démarrer
+    emetteur:     'congeapp.fr',
+    dureeMinutes: Number(process.env.JWT_DUREE ?? 60),
+  },
+  baseDeDonnees: { url: exigerVariable('DATABASE_URL') },
+};
+```
+
+Échouer au démarrage quand un secret manque vaut mieux que de découvrir le problème à la première connexion d'un utilisateur.
+
+---
+
+### 11bis.5 La journalisation côté serveur
+
+Les journaux permettent de comprendre ce qui se passe en production — sans eux, un bug en production est invisible.
+
+```javascript
+class ServiceConges {
+  async deposer(idSalarie, { debut, fin }) {
+    logger.info('Tentative de dépôt de demande', { idSalarie, debut, fin });
+
+    if (fin < debut) {
+      logger.warn('Dates incohérentes', { idSalarie });
+      return Resultat.erreur('Dates incohérentes.');
     }
-  },
-  "Jwt": {
-    "Issuer": "congeapp.fr",
-    "Audience": "congeapp-users",
-    "ExpirationMinutes": 60
-  },
-  "ConnectionStrings": {
-    "Default": "Server=db;Database=CongeApp;User=app;..."
+
+    try {
+      const id = await this.depot.inserer({ idSalarie, debut, fin });
+      logger.info('Demande créée', { idSalarie, idDemande: id });
+      return Resultat.ok(id);
+    } catch (err) {
+      logger.error('Échec de la création', { idSalarie, erreur: err.message });
+      return Resultat.erreur('Erreur technique.');
+    }
   }
 }
 ```
 
-**`appsettings.Development.json`** — surcharges pour le développement local (commité) :
+**Message fixe, données à part.** Écrire `` logger.info(`Dépôt par ${idSalarie}`) `` produit un message différent à chaque appel : impossible de compter, de filtrer ou de déclencher une alerte dessus. En séparant le libellé des valeurs, l'outil de supervision peut regrouper et agréger.
 
-```json
-{
-  "Logging": { "LogLevel": { "Default": "Debug" } }
-}
-```
-
-**Variables d'environnement** — pour les secrets en production (jamais committées) :
-
-```bash
-# .env sur le serveur (chmod 600, non commité)
-Jwt__Secret=une-cle-secrete-longue-et-aleatoire
-ConnectionStrings__Default=Server=db;Password=motdepasse;...
-```
-
-**Lire la configuration dans le code :**
-
-```csharp
-// Dans Program.cs ou n'importe quel service via injection
-public class ServiceToken
-{
-    private readonly IConfiguration _config;
-    public ServiceToken(IConfiguration config) => _config = config;
-
-    public string GenererToken(Salarie salarie)
-    {
-        var secret    = _config["Jwt:Secret"]!;
-        var issuer    = _config["Jwt:Issuer"]!;
-        var dureeMin  = int.Parse(_config["Jwt:ExpirationMinutes"]!);
-        // ...
-    }
-}
-```
-
-ASP.NET Core fusionne automatiquement `appsettings.json`, `appsettings.{Environment}.json` et les variables d'environnement (les variables d'env ont la priorité la plus haute).
-
----
-
-### 11bis.5 Le logging côté serveur
-
-Les logs permettent de comprendre ce qui se passe dans l'application en production — sans les logs, un bug en prod est invisible.
-
-```csharp
-public class ServiceConges
-{
-    private readonly ILogger<ServiceConges> _logger;
-
-    public ServiceConges(ILogger<ServiceConges> logger) => _logger = logger;
-
-    public Resultat Deposer(int idSalarie, DemandeCreationDto dto)
-    {
-        _logger.LogInformation(
-            "Tentative de dépôt de demande par salarié {Id} du {Debut} au {Fin}",
-            idSalarie, dto.DateDebut, dto.DateFin);
-
-        if (dto.DateFin < dto.DateDebut)
-        {
-            _logger.LogWarning("Dates incohérentes pour salarié {Id}", idSalarie);
-            return Resultat.Erreur("Dates incohérentes.");
-        }
-
-        try
-        {
-            _repo.Inserer(/* ... */);
-            _logger.LogInformation("Demande créée avec succès pour salarié {Id}", idSalarie);
-            return Resultat.Ok();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Erreur lors de la création de la demande pour salarié {Id}", idSalarie);
-            return Resultat.Erreur("Erreur technique.");
-        }
-    }
-}
-```
-
-**Niveaux de log (du moins au plus grave) :**
+**Niveaux de journalisation** (du moins au plus grave) :
 
 | Niveau | Quand l'utiliser |
 | --- | --- |
-| `LogTrace` | Détails très fins (débogage intensif) |
-| `LogDebug` | Informations de débogage, uniquement en dev |
-| `LogInformation` | Événements normaux du flux applicatif |
-| `LogWarning` | Situation anormale mais non bloquante |
-| `LogError` | Erreur qui a empêché une opération |
-| `LogCritical` | Défaillance système — l'app est inutilisable |
+| `trace` | Détails très fins, mise au point intensive |
+| `debug` | Informations de mise au point, uniquement en développement |
+| `info` | Événements normaux du flux applicatif |
+| `warn` | Situation anormale mais non bloquante |
+| `error` | Erreur qui a empêché une opération d'aboutir |
+| `critical` | Défaillance système — l'application est inutilisable |
 
-**⚠️ Ne jamais logger :**
-- Mots de passe ou hash de mots de passe
-- Tokens JWT
-- Données personnelles sensibles (numéro de sécurité sociale…)
-- Numéros de carte bancaire
+En production, on filtre à partir de `info` : `debug` est trop verbeux et fait grossir les journaux pour rien.
 
-Les logs sont souvent accessibles à l'équipe infrastructure — une donnée sensible dans les logs est une fuite de données.
+**⚠️ Ce qui n'a rien à faire dans un journal :**
+- les mots de passe, et leurs empreintes
+- les jetons d'authentification
+- les données personnelles sensibles (numéro de sécurité sociale, données de santé)
+- les numéros de carte bancaire
+
+Les journaux sont souvent lisibles par l'équipe d'exploitation et exportés vers un outil tiers : une donnée sensible qui y entre est une fuite.
 
 > **🔒 Sécurité**
 >
-> - **Validation toujours côté serveur** — la validation front-end est du confort, pas de la sécurité.
-> - **Ne jamais afficher de détails techniques** dans les erreurs envoyées au client (stack trace, nom de table SQL, version du framework).
-> - **Variables d'environnement** pour les secrets — jamais de mot de passe dans `appsettings.json` commité.
-> - **Logging sécurisé** : journaliser les événements de sécurité (connexions échouées, accès refusés) sans y inclure les données sensibles (OWASP A09).
+> - **Validation systématiquement côté serveur** — celle du front-end est du confort, pas une protection.
+> - **Aucun détail technique dans les erreurs renvoyées au client** : ni trace d'exécution, ni nom de table, ni version de bibliothèque. Un identifiant de corrélation suffit.
+> - **Les secrets viennent de l'environnement**, pas d'un fichier versionné — et un secret entré une fois dans l'historique Git doit être considéré comme compromis.
+> - **Journaliser les événements de sécurité** (connexions échouées, accès refusés) sans y inclure de donnée sensible (OWASP A09).

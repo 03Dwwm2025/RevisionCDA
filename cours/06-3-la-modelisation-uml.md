@@ -48,12 +48,12 @@ Salarié ────────────┤──── ( Déposer une dema
 
 ### 3.2 Diagramme de classes
 
-Vue **statique** de la structure : les classes, leurs attributs, leurs méthodes et leurs relations. C'est la base de la conception objet — il se traduit presque directement en code C#.
+Vue **statique** de la structure : les classes, leurs attributs, leurs méthodes et leurs relations. C'est la base de la conception objet — il se traduit presque ligne pour ligne en code, dans n'importe quel langage objet.
 
 **Notation :**
 - `+` public, `-` privé, `#` protégé
-- `attribut : type` → propriété C#
-- `methode() : typeRetour` → méthode C#
+- `attribut : type` → une propriété de la classe
+- `methode() : typeRetour` → une méthode, avec son type de retour
 
 ```
 ┌─────────────────────────┐          ┌──────────────────────────┐
@@ -78,30 +78,36 @@ Vue **statique** de la structure : les classes, leurs attributs, leurs méthodes
 └──────────────────────┘
 ```
 
-**Du diagramme de classes au code C# :** chaque boîte devient une classe, chaque attribut une propriété, chaque relation une FK ou une navigation property.
+**Du diagramme de classes au code :** chaque boîte devient une classe, chaque attribut une propriété, chaque méthode une fonction, et chaque relation soit une référence en mémoire, soit une clé étrangère en base.
 
-```csharp
+```javascript
 // ← Traduction directe du diagramme ci-dessus
-public class Salarie
-{
-    public int     IdSalarie   { get; set; }  // - idSalarie : int
-    public string  Nom         { get; set; } = "";  // - nom : string
-    public string  Email       { get; set; } = "";
-    public decimal SoldeConges { get; set; }
+class Salarie {
+  #solde;                      // le # marque un champ privé (le - du diagramme)
 
-    // La relation "dépose" (1 à *) se traduit par une liste côté Salarie
-    public List<Demande> Demandes { get; set; } = new();
+  constructor(id, nom, email, solde) {
+    this.idSalarie = id;       // - idSalarie : int
+    this.nom = nom;            // - nom : string
+    this.email = email;
+    this.#solde = solde;
+    this.demandes = [];        // la relation « dépose » (1 à *) devient une liste
+  }
 
-    public int    CalculerSolde()  { /* ... */ return 0; }
-    public string SePresenter()    => $"Je suis {Nom}";
+  calculerSolde() { return this.#solde; }   // + calculerSolde() : int
+  sePresenter()   { return `Je suis ${this.nom}`; }
 }
 
-public class Manager : Salarie   // ← héritage (flèche triangulaire)
-{
-    public string Service { get; set; } = "";
-    public void ValiderDemande(int idDemande) { /* ... */ }
+class Manager extends Salarie {             // ← héritage (flèche triangulaire)
+  constructor(id, nom, email, solde, service) {
+    super(id, nom, email, solde);
+    this.service = service;
+  }
+
+  validerDemande(idDemande) { /* ... */ }
 }
 ```
+
+La traduction est la même dans tout langage objet : `extends` en JavaScript, `:` en C#, `extends` en Java, parenthèses en Python. Ce qui compte, c'est que le diagramme se lise directement dans le code — et inversement.
 
 **Types de relations :**
 

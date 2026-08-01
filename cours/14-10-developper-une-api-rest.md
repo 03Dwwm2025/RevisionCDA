@@ -49,42 +49,31 @@ DELETE /api/demandes/7        → supprimer la demande n°7
 
 ---
 
-### 10.3 Contrôleur ASP.NET Core
+### 10.3 Les points d'entrée de l'API
 
-```csharp
-[ApiController]
-[Route("api/demandes")]
-public class DemandesController : ControllerBase
-{
-    private readonly IServiceConges _service;
-    public DemandesController(IServiceConges service) => _service = service;
+```javascript
+// Un point d'entrée par ressource et par verbe. Ici avec Express, mais le
+// découpage est le même avec n'importe quel cadriciel HTTP.
+app.get('/api/demandes/:id', authentifier, async (req, res) => {
+  const demande = await serviceConges.parId(req.params.id);
+  if (!demande) return res.sendStatus(404);                       // 404
 
-    [HttpGet("{id:int}")]
-    [Authorize]
-    public IActionResult Get(int id)
-    {
-        var d = _service.GetParId(id);
-        if (d is null) return NotFound();  // 404
+  // Contrôle d'accès : la ressource appartient-elle à l'appelant ? (OWASP A01)
+  if (demande.idSalarie !== req.utilisateur.id) return res.sendStatus(403);  // 403
 
-        // Vérification Broken Access Control (OWASP A01)
-        var idConnecte = int.Parse(User.FindFirst("sub")!.Value);
-        if (d.IdSalarie != idConnecte) return Forbid(); // 403
+  res.json(demande);                                              // 200
+});
 
-        return Ok(d); // 200
-    }
+app.post('/api/demandes', authentifier, async (req, res) => {
+  const erreurs = valider(req.body, schemaCreation);
+  if (erreurs) return res.status(400).json({ erreurs });          // 400 — format
 
-    [HttpPost]
-    [Authorize]
-    public IActionResult Creer([FromBody] DemandeDto dto)
-    {
-        if (!ModelState.IsValid) return BadRequest(ModelState); // 400 — format invalide
-        var idSalarie = int.Parse(User.FindFirst("sub")!.Value);
-        var res = _service.Deposer(idSalarie, dto);
-        return res.Succes
-            ? CreatedAtAction(nameof(Get), new { id = res.Id }, null) // 201
-            : BadRequest(res.Message); // 400 — règle métier
-    }
-}
+  const resultat = await serviceConges.deposer(req.utilisateur.id, req.body);
+
+  return resultat.succes
+    ? res.status(201).location(`/api/demandes/${resultat.id}`).json({ id: resultat.id })
+    : res.status(400).json({ message: resultat.message });        // 400 — règle métier
+});
 ```
 
 ---
@@ -93,21 +82,24 @@ public class DemandesController : ControllerBase
 
 On n'expose jamais l'entité directement — on utilise des DTO pour contrôler exactement ce qui entre et sort de l'API.
 
-```csharp
-public class DemandeDto          // ← entrée (client → API)
-{
-    [Required] public DateOnly DateDebut { get; set; }
-    [Required] public DateOnly DateFin   { get; set; }
-    // Pas d'Id (généré par la BDD), pas de Statut (toujours EN_ATTENTE à la création)
-}
+```javascript
+// ← ENTRÉE (client → API) : on déclare ce qu'on accepte, et rien de plus
+const schemaCreation = {
+  dateDebut: { type: 'date', requis: true },
+  dateFin:   { type: 'date', requis: true },
+  // Pas d'identifiant (généré par la base), pas de statut (toujours EN_ATTENTE
+  // à la création) : sinon un client pourrait créer une demande déjà validée.
+};
 
-public class DemandeReponseDto   // ← sortie (API → client)
-{
-    public int    Id         { get; set; }
-    public string DateDebut  { get; set; } = "";
-    public string Statut     { get; set; } = "";
-    public string NomSalarie { get; set; } = ""; // enrichi via jointure
-    // Pas de hashMotDePasse, pas de données internes
+// ← SORTIE (API → client) : on déclare ce qu'on expose, et rien de plus
+function versReponse(demande, salarie) {
+  return {
+    id:         demande.id,
+    dateDebut:  demande.dateDebut,
+    statut:     demande.statut,
+    nomSalarie: salarie.nom,     // enrichi par une jointure
+    // ni empreinte de mot de passe, ni colonne technique
+  };
 }
 ```
 
@@ -138,52 +130,55 @@ Le **payload** contient les informations de l'utilisateur (non chiffré, mais si
 
 **Génération du token côté serveur :**
 
-```csharp
-public string GenererToken(Salarie salarie)
-{
-    var cle  = new SymmetricSecurityKey(
-                   Encoding.UTF8.GetBytes(_config["Jwt:Secret"]!));
-    var creds = new SigningCredentials(cle, SecurityAlgorithms.HmacSha256);
+```javascript
+import jwt from 'jsonwebtoken';
 
-    var claims = new[]
+function genererJeton(salarie) {
+  return jwt.sign(
     {
-        new Claim("sub",  salarie.IdSalarie.ToString()),
-        new Claim("name", salarie.Nom),
-        new Claim("role", salarie.Role)
-    };
-
-    var token = new JwtSecurityToken(
-        issuer:             _config["Jwt:Issuer"],
-        audience:           _config["Jwt:Audience"],
-        claims:             claims,
-        expires:            DateTime.UtcNow.AddMinutes(60), // ← expire dans 1h
-        signingCredentials: creds
-    );
-
-    return new JwtSecurityTokenHandler().WriteToken(token);
+      sub:  salarie.id,          // à qui appartient ce jeton
+      nom:  salarie.nom,
+      role: salarie.role,
+    },
+    process.env.JWT_SECRET,      // le secret vient de l'environnement, pas du code
+    {
+      expiresIn: '1h',           // durée courte : limite la fenêtre en cas de vol
+      issuer:    'congeapp.fr',
+      audience:  'congeapp-users',
+    },
+  );
 }
 ```
 
 Le token est envoyé dans chaque requête : `Authorization: Bearer <token>`
 
-**Vérification automatique par ASP.NET Core** (configurée en `Program.cs`) :
+**Vérification à l'entrée**, une fois pour toutes, avant d'atteindre le code métier :
 
-```csharp
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!)),
-            ValidateIssuer   = true,
-            ValidIssuer      = builder.Configuration["Jwt:Issuer"],
-            ValidateAudience = true,
-            ValidAudience    = builder.Configuration["Jwt:Audience"],
-            ValidateLifetime = true  // ← vérifie la date d'expiration
-        };
+```javascript
+// Middleware d'authentification : vérifie la signature avant tout traitement
+function authentifier(req, res, next) {
+  const entete = req.headers.authorization ?? '';
+  const jeton  = entete.startsWith('Bearer ') ? entete.slice(7) : null;
+  if (!jeton) return res.sendStatus(401);
+
+  try {
+    // verify contrôle la signature, l'expiration, l'émetteur et l'audience
+    const charge = jwt.verify(jeton, process.env.JWT_SECRET, {
+      issuer:   'congeapp.fr',
+      audience: 'congeapp-users',
     });
+    req.utilisateur = { id: charge.sub, role: charge.role };
+    next();
+  } catch {
+    return res.sendStatus(401);   // signature invalide ou jeton expiré
+  }
+}
+
+// Autorisation : une fois l'identité connue, on vérifie les droits
+const exigerRole = (role) => (req, res, next) =>
+  req.utilisateur.role === role ? next() : res.sendStatus(403);
+
+app.post('/api/demandes/:id/valider', authentifier, exigerRole('Manager'), /* ... */);
 ```
 
 ---
@@ -196,23 +191,18 @@ Par sécurité, les navigateurs bloquent les requêtes JavaScript vers un domain
 
 Le serveur doit **explicitement autoriser** les origines qui peuvent l'appeler.
 
-```csharp
-// Program.cs — configuration CORS
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("PolitiqueFront", policy =>
-        policy
-            .WithOrigins("https://monapp.fr", "http://localhost:5173") // ← origines autorisées
-            .AllowAnyMethod()   // GET, POST, PUT, DELETE...
-            .AllowAnyHeader()   // Authorization, Content-Type...
-    );
-});
+```javascript
+import cors from 'cors';
 
-// Activer le middleware CORS (avant UseAuthentication)
-app.UseCors("PolitiqueFront");
+app.use(cors({
+  origin: ['https://monapp.fr', 'http://localhost:5173'],  // ← origines autorisées
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Authorization', 'Content-Type'],
+  credentials: true,                                       // nécessaire si cookies
+}));
 ```
 
-> **⚠️ Ne jamais utiliser `.AllowAnyOrigin()` en production** — cela autorise n'importe quel site à appeler l'API, y compris des sites malveillants.
+> **⚠️ Éviter le joker `*` en production** — il autorise n'importe quel site à appeler l'API depuis le navigateur d'un utilisateur connecté. On liste les origines réellement nécessaires.
 
 ---
 
@@ -226,23 +216,22 @@ GET /api/demandes?page=2&taille=20&statut=EN_ATTENTE&tri=-dateDebut
                                                         (- = décroissant)
 ```
 
-```csharp
-[HttpGet]
-public IActionResult Lister([FromQuery] int page = 1, [FromQuery] int taille = 20,
-                            [FromQuery] string? statut = null)
-{
-    taille = Math.Clamp(taille, 1, 100);   // ← borner : sinon taille=1000000 devient une attaque
-    var (items, total) = _service.Lister(page, taille, statut);
+```javascript
+app.get('/api/demandes', authentifier, async (req, res) => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  // ← borner : sans cela, taille=1000000 devient une attaque par épuisement
+  const taille = Math.min(100, Math.max(1, Number(req.query.taille) || 20));
 
-    return Ok(new
-    {
-        donnees = items,
-        page,
-        taille,
-        total,
-        totalPages = (int)Math.Ceiling(total / (double)taille)
-    });
-}
+  const { items, total } = await serviceConges.lister({ page, taille, statut: req.query.statut });
+
+  res.json({
+    donnees:    items,
+    page,
+    taille,
+    total,
+    totalPages: Math.ceil(total / taille),
+  });
+});
 ```
 
 **Deux stratégies de pagination :**
@@ -265,12 +254,10 @@ GET /api/v1/demandes     ← l'ancienne, maintenue le temps de la migration
 GET /api/v2/demandes     ← la nouvelle, avec la réponse paginée
 ```
 
-```csharp
-[ApiController]
-[Route("api/v{version:apiVersion}/demandes")]
-[ApiVersion("1.0")]
-[ApiVersion("2.0")]
-public class DemandesController : ControllerBase { /* ... */ }
+```javascript
+// Deux versions montées côté à côté, le temps de la migration des clients
+app.use('/api/v1/demandes', routeurDemandesV1);   // maintenue, figée
+app.use('/api/v2/demandes', routeurDemandesV2);   // nouvelle, réponse paginée
 ```
 
 | Emplacement de la version | Exemple | Remarque |
@@ -320,14 +307,13 @@ Le jeton d'accès reste court pour limiter la fenêtre de vol ; le jeton de rafr
 
 Swagger génère automatiquement une **documentation interactive** de l'API accessible dans le navigateur. Très utile pour tester les endpoints pendant le développement.
 
-```csharp
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+```javascript
+// La documentation est générée à partir d'une description OpenAPI du contrat,
+// et servie uniquement hors production.
+import swaggerUi from 'swagger-ui-express';
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(); // → accessible sur /swagger
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(descriptionOpenApi));
 }
 ```
 

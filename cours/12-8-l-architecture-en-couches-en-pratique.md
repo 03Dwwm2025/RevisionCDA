@@ -6,269 +6,260 @@ On concrétise ici la théorie de la Partie I. Le flux complet d'une requête HT
 Client HTTP
     │  POST /api/demandes
     ▼
-Controller  ← reçoit, valide le FORMAT (Data Annotations)
+Présentation  ← reçoit, valide le FORMAT des données
     │  délègue
     ▼
-Service     ← applique les RÈGLES MÉTIER (solde, dates, chevauchement)
+Métier        ← applique les RÈGLES DE GESTION (solde, dates, chevauchement)
     │  délègue
     ▼
-Repository  ← exécute le SQL paramétré
+Accès données ← exécute le SQL paramétré
     │  requête
     ▼
 Base de données
 ```
 
-Chaque couche a une responsabilité unique. Les dépendances vont toujours vers le bas — le Controller connaît le Service, le Service connaît le Repository, jamais l'inverse.
+Chaque couche a une responsabilité unique. Les dépendances vont dans un seul sens, vers le bas — la présentation connaît le métier, le métier connaît l'accès aux données, et pas l'inverse.
+
+> **Les exemples de ce chapitre sont en JavaScript et en SQL.** Ce sont des illustrations : la structure en couches se transpose telle quelle en C#, Java, PHP ou Python. Seuls les noms changent — Controller ou Handler, Service ou UseCase, Repository ou DAO.
 
 ---
 
-### 8.1 La classe Resultat — objet de retour du Service
+### 8.1 L'objet Resultat — la valeur de retour de la couche métier
 
-Le Service ne retourne ni `true/false`, ni n'envoie d'exceptions pour les erreurs métier normales. Il retourne un objet `Resultat` qui porte le succès ou l'échec avec un message.
+La couche métier ne renvoie ni un simple booléen, ni une exception pour une erreur de gestion normale. Une demande refusée pour solde insuffisant n'est pas un incident technique : c'est un cas prévu. Elle renvoie un objet `Resultat` qui porte le succès ou l'échec, avec un message exploitable.
 
-```csharp
-// Classe utilitaire définie une fois, utilisée dans tout le projet
-public class Resultat
-{
-    public bool   Succes  { get; private set; }
-    public string Message { get; private set; } = "";
-    public int    Id      { get; private set; }
+```javascript
+// Défini une fois, utilisé dans tout le projet
+class Resultat {
+  constructor(succes, message = '', id = null) {
+    this.succes = succes;
+    this.message = message;
+    this.id = id;
+    Object.freeze(this);          // figé : personne ne le modifiera après coup
+  }
 
-    // Méthodes statiques de création (pattern Factory)
-    public static Resultat Ok()           => new() { Succes = true };
-    public static Resultat Ok(int id)     => new() { Succes = true, Id = id };
-    public static Resultat Erreur(string msg) => new() { Succes = false, Message = msg };
+  // Méthodes de fabrique : le nom dit l'intention
+  static ok(id)      { return new Resultat(true, '', id); }
+  static erreur(msg) { return new Resultat(false, msg); }
 }
 ```
 
-Utilisation dans le Controller :
-```csharp
-var res = _service.Deposer(idSalarie, dto);
-// res.Succes indique si tout s'est bien passé
-// res.Message contient le motif si erreur
-// res.Id contient l'identifiant créé si succès
+Utilisation depuis la couche de présentation :
+
+```javascript
+const resultat = await serviceConges.deposer(idSalarie, donnees);
+// resultat.succes  → l'opération a-t-elle abouti ?
+// resultat.message → le motif du refus, à afficher à l'utilisateur
+// resultat.id      → l'identifiant créé en cas de succès
 ```
+
+**Pourquoi pas une exception ?** Une exception coûte cher, remonte toute la pile, et surtout brouille la lecture : elle signale un imprévu, alors qu'un solde insuffisant est un cas métier parfaitement prévu. On réserve les exceptions aux vraies pannes — base injoignable, disque plein.
 
 ---
 
-### 8.2 Le Model / DTO
+### 8.2 Les modèles et les objets de transport
 
-Les **entités** représentent les données telles qu'elles existent en base. Les **DTO** (*Data Transfer Objects*) sont des objets allégés qui transportent uniquement les données nécessaires à un échange précis.
+Les **entités** représentent les données telles qu'elles existent en base. Les **objets de transport** (*Data Transfer Objects*) ne portent que les données nécessaires à un échange précis.
 
-```csharp
-// ← ENTITÉ : reflet exact de la table en base
-public class Demande
-{
-    public int      Id        { get; set; }
-    public DateOnly DateDebut { get; set; }
-    public DateOnly DateFin   { get; set; }
-    public string   Statut    { get; set; } = "EN_ATTENTE";
-    public int      IdSalarie { get; set; }
-}
+```javascript
+// ← ENTITÉ : reflet de la table en base
+// { id, dateDebut, dateFin, statut, idSalarie }
 
-// ← DTO D'ENTRÉE : ce que le client envoie au POST
-//   Pas d'Id (généré par la BDD), pas de Statut (toujours EN_ATTENTE à la création)
-public class DemandeCreationDto
-{
-    [Required] public DateOnly DateDebut { get; set; }
-    [Required] public DateOnly DateFin   { get; set; }
-}
+// ← ENTRÉE : ce que le client a le droit d'envoyer au POST
+//   Pas d'identifiant (généré par la base), pas de statut (toujours EN_ATTENTE
+//   à la création) : ces champs ne doivent pas être pilotables par le client.
+const schemaCreation = {
+  dateDebut: { type: 'date', requis: true },
+  dateFin:   { type: 'date', requis: true },
+};
 
-// ← DTO DE SORTIE : ce que l'API renvoie au client
-//   Enrichi avec le nom du salarié (jointure), sans les données internes
-public class DemandeReponseDto
-{
-    public int    Id         { get; set; }
-    public string DateDebut  { get; set; } = "";
-    public string DateFin    { get; set; } = "";
-    public string Statut     { get; set; } = "";
-    public string NomSalarie { get; set; } = ""; // ← vient d'une jointure, pas de l'entité
+// ← SORTIE : ce que l'API renvoie, enrichi et filtré
+function versReponse(demande, salarie) {
+  return {
+    id:         demande.id,
+    dateDebut:  demande.dateDebut,
+    dateFin:    demande.dateFin,
+    statut:     demande.statut,
+    nomSalarie: salarie.nom,      // ← vient d'une jointure, pas de l'entité
+    // ni le solde, ni l'identifiant du manager, ni aucune colonne technique
+  };
 }
 ```
 
-**Pourquoi des DTO ?** L'entité `Salarie` contient potentiellement un hash de mot de passe, des données internes, des clés étrangères… On ne veut pas tout exposer dans la réponse API. Le DTO définit précisément ce qui sort.
+**Pourquoi séparer ?** L'entité `Salarie` porte l'empreinte du mot de passe, des clés étrangères, des colonnes techniques. Le danger n'est pas ce qu'on expose aujourd'hui : c'est la colonne qu'on ajoutera demain à l'entité, et qui se retrouverait publiée dans l'API sans que personne ne l'ait décidé.
+
+**Le piège de l'entrée**, souvent sous-estimé : si le client peut envoyer un champ `statut`, il peut créer une demande directement validée. Ce qu'on accepte en entrée se déclare aussi explicitement que ce qu'on renvoie en sortie.
 
 ---
 
-### 8.3 Le Repository — deux approches possibles
+### 8.3 L'accès aux données — deux approches possibles
 
-Le Repository centralise toutes les requêtes vers la base. Il existe deux grandes façons de l'implémenter :
+Cette couche centralise toutes les requêtes vers la base. Deux grandes façons de l'écrire.
 
-**Approche 1 — ADO.NET (SQL direct)** : on écrit le SQL à la main, on paramètre manuellement.
+**Approche 1 — SQL écrit à la main.** On maîtrise la requête exacte ; on paramètre soi-même.
 
-```csharp
-public class DemandeRepository : IDemandeRepository
-{
-    private readonly string _connString;
-    public DemandeRepository(string connString) => _connString = connString;
+```javascript
+class DepotDemande {
+  constructor(connexion) { this.connexion = connexion; }
 
-    public List<Demande> GetParSalarie(int idSalarie)
-    {
-        var list = new List<Demande>();
-        using var conn = new SqlConnection(_connString);
-        var sql = @"SELECT idDemande, dateDebut, dateFin, statut
-                    FROM Demande WHERE idSalarie = @id ORDER BY dateDebut DESC";
-        using var cmd = new SqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@id", idSalarie); // ← paramétré, anti-injection SQL
-        conn.Open();
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
-            list.Add(new Demande {
-                Id = reader.GetInt32(0),
-                DateDebut = DateOnly.FromDateTime(reader.GetDateTime(1)),
-                DateFin   = DateOnly.FromDateTime(reader.GetDateTime(2)),
-                Statut    = reader.GetString(3)
-            });
-        return list;
-    }
+  async parSalarie(idSalarie) {
+    const { rows } = await this.connexion.query(
+      `SELECT idDemande, dateDebut, dateFin, statut
+       FROM Demande
+       WHERE idSalarie = $1
+       ORDER BY dateDebut DESC`,
+      [idSalarie],                       // ← paramétré : protection contre l'injection SQL
+    );
+    return rows;
+  }
+
+  async inserer({ idSalarie, dateDebut, dateFin }) {
+    const { rows } = await this.connexion.query(
+      `INSERT INTO Demande (idSalarie, dateDebut, dateFin, statut)
+       VALUES ($1, $2, $3, 'EN_ATTENTE')
+       RETURNING idDemande`,
+      [idSalarie, dateDebut, dateFin],
+    );
+    return rows[0].idDemande;
+  }
 }
 ```
 
-**Approche 2 — Entity Framework Core (ORM)** : on écrit en LINQ, EF génère le SQL paramétré automatiquement.
+**Approche 2 — un ORM.** On décrit la requête avec des objets, l'outil produit le SQL paramétré.
 
-```csharp
-public class DemandeRepository : IDemandeRepository
-{
-    private readonly AppDbContext _db;
-    public DemandeRepository(AppDbContext db) => _db = db;
+```javascript
+class DepotDemande {
+  constructor(orm) { this.orm = orm; }
 
-    public List<Demande> GetParSalarie(int idSalarie)
-    {
-        // EF traduit ce LINQ en : SELECT ... FROM Demande WHERE IdSalarie = @p0 ORDER BY DateDebut DESC
-        return _db.Demandes
-            .Where(d => d.IdSalarie == idSalarie)
-            .OrderByDescending(d => d.DateDebut)
-            .ToList();
-    }
+  async parSalarie(idSalarie) {
+    // Traduit en : SELECT ... FROM Demande WHERE idSalarie = $1 ORDER BY dateDebut DESC
+    return this.orm.demande.findMany({
+      where:   { idSalarie },
+      orderBy: { dateDebut: 'desc' },
+    });
+  }
 
-    public int Inserer(Demande d)
-    {
-        _db.Demandes.Add(d);
-        _db.SaveChanges();
-        return d.Id; // EF remplit l'Id après SaveChanges
-    }
+  async inserer(donnees) {
+    const creee = await this.orm.demande.create({ data: { ...donnees, statut: 'EN_ATTENTE' } });
+    return creee.idDemande;
+  }
 }
 ```
 
-**Lequel choisir ?** EF Core est recommandé pour la plupart des projets : moins de code, paramétrage automatique, migrations de schéma. ADO.NET est utile pour des requêtes très complexes ou des performances critiques.
+**Lequel choisir ?** L'ORM couvre confortablement la grande majorité des cas : moins de code répétitif, paramétrage automatique, migrations de schéma versionnées. Le SQL écrit à la main reste utile pour une requête analytique complexe, ou quand on veut contrôler précisément le plan d'exécution. Les deux cohabitent très bien dans le même projet.
+
+**Ce qui compte, c'est que les deux respectent le même contrat.** La couche métier appelle `parSalarie()` et `inserer()` sans savoir laquelle des deux implémentations elle a en face — c'est ce qui permet d'en changer, et de tester sans base de données.
 
 ---
 
-### 8.4 Le Service — couche métier
+### 8.4 La couche métier
 
-Le Service applique les **règles métier**. Il ne connaît pas HTTP, ne fait pas de SQL — il délègue au Repository via les interfaces.
+C'est ici que vivent les **règles de gestion**. Cette couche ne connaît ni HTTP, ni SQL : elle reçoit ses collaborateurs et travaille avec des objets du domaine.
 
-```csharp
-public class ServiceConges : IServiceConges
-{
-    private readonly IDemandeRepository  _repo;
-    private readonly ISalarieRepository  _salarieRepo;
+```javascript
+class ServiceConges {
+  // ← Les dépendances sont reçues, pas créées : on peut les remplacer en test
+  constructor(depotDemande, depotSalarie) {
+    this.depotDemande = depotDemande;
+    this.depotSalarie = depotSalarie;
+  }
 
-    // ← Les dépendances sont des INTERFACES, jamais des classes concrètes (DIP)
-    public ServiceConges(IDemandeRepository repo, ISalarieRepository salarieRepo)
-    {
-        _repo        = repo;
-        _salarieRepo = salarieRepo;
+  async deposer(idSalarie, { dateDebut, dateFin }) {
+    // ← RG-02 : cohérence des dates
+    if (dateFin < dateDebut) {
+      return Resultat.erreur('La date de fin doit être après la date de début.');
     }
 
-    public Resultat Deposer(int idSalarie, DemandeCreationDto dto)
-    {
-        // ← Règle 1 : validation métier (pas de format — c'est le rôle des Data Annotations)
-        if (dto.DateFin < dto.DateDebut)
-            return Resultat.Erreur("La date de fin doit être après la date de début.");
-
-        // ← Règle 2 : vérification du solde disponible
-        int nbJours = (dto.DateFin.DayNumber - dto.DateDebut.DayNumber) + 1;
-        var salarie  = _salarieRepo.GetParId(idSalarie);
-        if (salarie.SoldeConges < nbJours)
-            return Resultat.Erreur($"Solde insuffisant ({salarie.SoldeConges} j disponibles).");
-
-        // ← Règle 3 : pas de chevauchement avec une demande existante
-        bool chevauchement = _repo.GetParSalarie(idSalarie)
-            .Any(d => d.Statut != "REFUSEE"
-                   && d.DateDebut <= dto.DateFin
-                   && d.DateFin   >= dto.DateDebut);
-        if (chevauchement)
-            return Resultat.Erreur("Une demande existe déjà sur cette période.");
-
-        int id = _repo.Inserer(new Demande {
-            IdSalarie = idSalarie,
-            DateDebut = dto.DateDebut,
-            DateFin   = dto.DateFin
-        });
-        return Resultat.Ok(id);
+    // ← RG-03 : solde disponible suffisant
+    const nbJours = joursEntre(dateDebut, dateFin);
+    const salarie = await this.depotSalarie.parId(idSalarie);
+    if (salarie.soldeConges < nbJours) {
+      return Resultat.erreur(`Solde insuffisant (${salarie.soldeConges} jours disponibles).`);
     }
+
+    // ← RG-06 : pas de chevauchement avec une demande déjà acceptée
+    const existantes = await this.depotDemande.parSalarie(idSalarie);
+    const chevauche = existantes.some(
+      (d) => d.statut !== 'REFUSEE' && d.dateDebut <= dateFin && d.dateFin >= dateDebut,
+    );
+    if (chevauche) {
+      return Resultat.erreur('Une demande existe déjà sur cette période.');
+    }
+
+    const id = await this.depotDemande.inserer({ idSalarie, dateDebut, dateFin });
+    return Resultat.ok(id);
+  }
 }
 ```
+
+Les commentaires renvoient aux **règles de gestion numérotées** lors de l'analyse des besoins. C'est ce qui rend la traçabilité possible : chaque règle du cahier des charges se retrouve à un endroit précis du code, et chaque règle donne un test.
 
 ---
 
-### 8.5 Le Controller
+### 8.5 La couche de présentation
 
-Le Controller reçoit les requêtes HTTP, **valide le format** (via `ModelState`) et **délègue** au Service. Pas de SQL, pas de règles métier.
+Elle reçoit la requête HTTP, **valide le format**, **délègue**, puis traduit le résultat métier en réponse HTTP. Pas de SQL, pas de règle de gestion.
 
-```csharp
-[ApiController]
-[Route("api/demandes")]
-public class DemandesController : ControllerBase
-{
-    private readonly IServiceConges _service;
+```javascript
+app.post('/api/demandes', authentifier, async (req, res) => {
+  // ← Niveau 1 : le format. Rejeté tout de suite, sans déranger le métier.
+  const erreurs = valider(req.body, schemaCreation);
+  if (erreurs) return res.status(400).json({ erreurs });
 
-    // ← Injection du Service via le constructeur (DIP)
-    public DemandesController(IServiceConges service) => _service = service;
+  // ← L'identité vient du jeton vérifié, pas du corps de la requête
+  const idSalarie = req.utilisateur.id;
 
-    [HttpPost]
-    [Authorize]
-    public IActionResult Creer([FromBody] DemandeCreationDto dto)
-    {
-        // ← Niveau 1 de validation : format (Data Annotations sur le DTO)
-        if (!ModelState.IsValid) return BadRequest(ModelState); // 400
+  // ← Niveau 2 : les règles de gestion, dans la couche métier
+  const resultat = await serviceConges.deposer(idSalarie, req.body);
 
-        int idSalarie = int.Parse(User.FindFirst("sub")!.Value);
+  if (!resultat.succes) return res.status(400).json({ message: resultat.message });
 
-        // ← Délègue au Service pour le niveau 2 : règles métier
-        var res = _service.Deposer(idSalarie, dto);
-
-        return res.Succes
-            ? CreatedAtAction(nameof(Get), new { id = res.Id }, null) // 201
-            : BadRequest(res.Message);                                 // 400 métier
-    }
-}
+  res.status(201)
+     .location(`/api/demandes/${resultat.id}`)
+     .json({ id: resultat.id });
+});
 ```
+
+> **L'identité ne se lit pas dans le corps de la requête.** Accepter un `idSalarie` envoyé par le client, c'est laisser n'importe qui déposer une demande au nom d'un collègue. Elle vient du jeton d'authentification, vérifié en amont. C'est le risque n°1 de l'OWASP Top 10.
 
 **Les deux niveaux de validation :**
 
 | Niveau | Où | Quoi | Exemple |
 | --- | --- | --- | --- |
-| **Niveau 1 — Format** | Controller (Data Annotations) | Types, tailles, formats | DateDebut obligatoire, Email valide |
-| **Niveau 2 — Métier** | Service | Règles business | Solde suffisant, pas de chevauchement |
+| **1 — Format** | Présentation | Types, présence, longueurs, motifs | Date de début obligatoire, e-mail plausible |
+| **2 — Gestion** | Métier | Règles qui dépendent d'autres données | Solde suffisant, pas de chevauchement |
+
+Le premier niveau ne peut pas absorber le second : vérifier un solde suppose d'aller lire en base, ce qui n'est pas le rôle d'une contrainte de format.
 
 ---
 
-### 8.6 Injection de dépendances (Program.cs)
+### 8.6 L'assemblage des couches
 
-L'injection de dépendances est le mécanisme qui résout automatiquement les interfaces vers leurs implémentations concrètes. On configure tout au démarrage de l'application :
+Chaque composant déclare ce dont il a besoin ; l'assemblage se fait à un seul endroit, au démarrage.
 
-```csharp
-// Program.cs — enregistrement des services
-builder.Services.AddScoped<IDemandeRepository,  DemandeRepository>();
-builder.Services.AddScoped<ISalarieRepository,  SalarieRepository>();
-builder.Services.AddScoped<IServiceConges,      ServiceConges>();
-
-// ASP.NET Core injecte automatiquement les dépendances dans les constructeurs
-// Quand le Controller demande un IServiceConges, il reçoit un ServiceConges
+```javascript
+// Composition de l'application — le seul endroit qui connaît les classes concrètes
+const connexion     = creerConnexion(process.env.DATABASE_URL);
+const depotDemande  = new DepotDemande(connexion);
+const depotSalarie  = new DepotSalarie(connexion);
+const serviceConges = new ServiceConges(depotDemande, depotSalarie);
 ```
 
-**Durées de vie :**
-- `AddScoped` → une instance par requête HTTP (le plus courant)
-- `AddSingleton` → une seule instance pour toute la durée de vie de l'app
-- `AddTransient` → une nouvelle instance à chaque injection
+**En test**, on remplace les collaborateurs sans toucher une ligne de la couche métier :
 
-**En test**, on remplace les implémentations réelles par des fausses :
-```csharp
-// Dans les tests
-services.AddScoped<IDemandeRepository, FakeDemandeRepository>();
-// ServiceConges reçoit le fake sans aucune modification de son code
+```javascript
+const service = new ServiceConges(new DepotDemandeEnMemoire(), new DepotSalarieFactice());
+// ServiceConges ne sait pas que ce ne sont pas les vrais : il ne connaît que le contrat
 ```
 
-> **📌 Règle d'or :** les dépendances vont **toujours vers le bas**. Controller → Service → Repository → BDD. Aucune couche ne connaît celle du dessus.
+**La durée de vie des objets** est le second réglage à connaître, quel que soit l'outillage :
+
+| Durée de vie | Une instance… | Usage typique |
+| --- | --- | --- |
+| Par requête | par requête HTTP traitée | Le cas par défaut : services, dépôts |
+| Unique | pour toute l'application | Configuration, cache, réserve de connexions |
+| À chaque demande | à chaque injection | Objets porteurs d'un état éphémère |
+
+Le piège classique est l'instance unique qui porte un état modifiable : toutes les requêtes simultanées la partagent, et les bugs qui en découlent sont difficiles à reproduire.
+
+> **📌 Règle d'or :** les dépendances vont **vers le bas**. Présentation → métier → accès aux données → base. Aucune couche ne connaît celle du dessus, et c'est ce qui rend chacune remplaçable et testable isolément.

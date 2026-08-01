@@ -362,26 +362,27 @@ END;
 
 ---
 
-### 9.12 Les ORM — Entity Framework Core
+### 9.12 Les ORM
 
-Un **ORM** (*Object-Relational Mapping*) fait le pont entre les objets C# et les tables SQL.
+Un **ORM** (*Object-Relational Mapping*) fait le pont entre les objets du code et les tables de la base : il traduit les uns dans les autres, et génère le SQL.
 
-```csharp
-// EF Core traduit LINQ en SQL paramétré
-var demandes = await _db.Demandes
-    .Include(d => d.Salarie)
-    .Where(d => d.Statut == "EN_ATTENTE")
-    .OrderBy(d => d.DateDebut)
-    .ToListAsync();
+```javascript
+// L'ORM compose la requête, puis la traduit en SQL paramétré
+const demandes = await db.demande.findMany({
+  where:   { statut: 'EN_ATTENTE' },
+  include: { salarie: true },       // jointure vers la table Salarie
+  orderBy: { dateDebut: 'asc' },
+});
+// → SELECT ... FROM Demande d JOIN Salarie s ON ... WHERE d.statut = $1 ORDER BY ...
 
-// INSERT
-_db.Demandes.Add(nouvelleDemande);
-await _db.SaveChangesAsync();
+// Insertion
+await db.demande.create({ data: { dateDebut, dateFin, statut: 'EN_ATTENTE', idSalarie } });
 
-// UPDATE
-demande.Statut = "VALIDEE";
-await _db.SaveChangesAsync();
+// Mise à jour
+await db.demande.update({ where: { idDemande: 7 }, data: { statut: 'VALIDEE' } });
 ```
+
+La syntaxe change d'un ORM à l'autre — Prisma ou Sequelize en JavaScript, Entity Framework en .NET, Hibernate en Java, Doctrine en PHP, SQLAlchemy en Python — mais le principe est identique : on décrit la requête avec des objets, l'ORM produit le SQL paramétré et fait la correspondance avec les classes du domaine.
 
 ---
 

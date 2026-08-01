@@ -55,23 +55,21 @@ Tout test unitaire se structure en trois étapes :
 - **Act** : exécuter l'action à tester (appeler la méthode)
 - **Assert** : vérifier que le résultat est celui attendu
 
-```csharp
-[Fact]
-public void Deposer_RefuseSiDatesIncoherentes()
-{
-    // Arrange
-    var service = new ServiceConges(new FakeDemandeRepository());
+```javascript
+test('refuse une demande dont la date de fin précède la date de début', () => {
+  // Arrange — préparer l'objet testé et ses doublures
+  const service = new ServiceConges(new DepotDemandeFactice());
 
-    // Act
-    var resultat = service.Deposer(1,
-        debut: new DateOnly(2026, 7, 10),
-        fin:   new DateOnly(2026, 7, 1)); // fin avant début
+  // Act — une seule action, celle qu'on teste
+  const resultat = service.deposer(1, '2026-07-10', '2026-07-01');
 
-    // Assert
-    Assert.False(resultat.Succes);
-    Assert.Equal("Dates incohérentes.", resultat.Message);
-}
+  // Assert — vérifier le résultat attendu
+  expect(resultat.succes).toBe(false);
+  expect(resultat.message).toBe('Dates incohérentes.');
+});
 ```
+
+Le nom du test est une phrase qui décrit le comportement attendu : quand il échoue dans la CI, on comprend le problème sans ouvrir le code. La syntaxe change selon l'outil — `test`/`expect` en JavaScript, attributs et assertions en C# ou en Java, `assert` en Python — la structure Arrange/Act/Assert, elle, ne change pas.
 
 ---
 

@@ -16,12 +16,15 @@ Les logs enregistrent les événements significatifs de l'application : requête
 | `Error` | Erreur qui a empêché une opération | "Timeout SQL sur GetParSalarie() après 30s" |
 | `Critical` | Défaillance système — app inutilisable | "Base de données inaccessible, toutes les requêtes échouent" |
 
-```csharp
-_logger.LogInformation("Dépôt demande par salarié {Id} du {Debut} au {Fin}",
-    idSalarie, debut, fin);
-_logger.LogWarning("Dates incohérentes pour salarié {Id}", idSalarie);
-_logger.LogError(ex, "Erreur SQL lors de l'insertion, salarié {Id}", idSalarie);
+```javascript
+// Journal structuré : le message reste fixe, les valeurs sont des champs à part.
+// C'est ce qui rend les journaux filtrables et agrégeables par un outil.
+logger.info('Dépôt de demande',  { idSalarie, debut, fin });
+logger.warn('Dates incohérentes', { idSalarie });
+logger.error('Échec de l’insertion en base', { idSalarie, erreur: err.message });
 ```
+
+> **Message fixe, données à part.** Écrire `` logger.info(`Dépôt par ${idSalarie}`) `` produit un message différent à chaque appel : impossible de compter les dépôts ou de filtrer dessus. En séparant le libellé des valeurs, l'outil de supervision peut regrouper, compter et alerter. Toutes les bibliothèques sérieuses fonctionnent ainsi.
 
 **Ce qu'il ne faut JAMAIS logger :**
 - Mots de passe ou tokens JWT — même hachés
@@ -155,7 +158,7 @@ Une fois l'application en production, le travail continue. On classe la maintena
 | --- | --- | --- | --- |
 | **Corrective** | Un défaut constaté | Le solde s'affiche en négatif après une annulation | ~20 % |
 | **Évolutive** | Un nouveau besoin métier | Ajouter l'export du planning en PDF | ~50 % |
-| **Adaptative** | Un changement dans l'environnement technique ou légal | Migrer de .NET 8 vers .NET 10, se mettre en conformité avec une nouvelle règle RGPD | ~20 % |
+| **Adaptative** | Un changement dans l'environnement technique ou légal | Migrer vers une nouvelle version majeure du langage, se mettre en conformité avec une nouvelle règle RGPD | ~20 % |
 | **Préventive** | Anticiper une panne avant qu'elle arrive | Ajouter un index avant que la table ne devienne trop lente, purger les journaux avant saturation du disque | ~10 % |
 
 Deux points que le jury aime entendre :

@@ -13,7 +13,7 @@ Chaque couche a une **responsabilité unique** et ne communique qu'avec ses vois
 | **Business / Métier (Service)** | Contenir les règles métier de l'application | Vérification solde, règles de validation |
 | **Repository** | Centraliser les requêtes vers la base de données | Requêtes SQL paramétrées, ORM |
 | **BDD** | Stocker et persister les données | Tables SQL |
-| **Model** | Objets de données transportés entre les couches | Classes C# simples (entités, DTO) |
+| **Model** | Objets de données transportés entre les couches | Structures simples : entités, objets de transport |
 | **Outils / Utils** | Fonctions utilitaires réutilisables partout | Helpers, formateurs de date, loggers |
 
 **Règle d'or : les dépendances vont vers le bas.**
@@ -33,52 +33,66 @@ View  ──►  Controller  ──►  Service  ──►  Repository  ──�
 ### 5.2 Pourquoi séparer en couches ?
 
 **Sans séparation :**
-```csharp
-// ❌ Tout dans le Controller — impossible à tester, à maintenir, à faire évoluer
-[HttpPost]
-public IActionResult Creer(DemandeDto dto)
-{
-    // Validation métier dans le controller
-    if (dto.Fin < dto.Debut) return BadRequest("Dates invalides");
+```javascript
+// ❌ Tout au même endroit — impossible à tester, à maintenir, à faire évoluer
+app.post('/api/demandes', async (req, res) => {
+  // règle métier mélangée au traitement de la requête
+  if (req.body.fin < req.body.debut) return res.status(400).send('Dates invalides');
 
-    // SQL directement dans le controller
-    using var conn = new SqlConnection(connectionString);
-    conn.Execute("INSERT INTO Demande VALUES (@debut, @fin, 42)", dto);
+  // SQL écrit directement ici
+  await db.query('INSERT INTO Demande (dateDebut, dateFin, idSalarie) VALUES ($1, $2, $3)',
+                 [req.body.debut, req.body.fin, 42]);
 
-    // Envoi d'e-mail dans le controller
-    SmtpClient.Send("manager@entreprise.fr", "Nouvelle demande");
+  // et envoi d'e-mail par-dessus
+  await smtp.envoyer('manager@entreprise.fr', 'Nouvelle demande');
 
-    return Ok();
-}
+  res.sendStatus(200);
+});
 ```
+
+Cette fonction fait quatre métiers à la fois. Pour tester la règle sur les dates, il faut une base de données et un serveur d'e-mail. Pour changer de moteur de base, il faut rouvrir chaque point d'entrée HTTP.
 
 **Avec séparation :**
-```csharp
-// ✅ Controller : valide et délègue uniquement
-[HttpPost]
-public IActionResult Creer([FromBody] DemandeDto dto)
-{
-    if (!ModelState.IsValid) return BadRequest(ModelState);
-    var res = _serviceConges.Deposer(dto);
-    return res.Succes ? CreatedAtAction(...) : BadRequest(res.Message);
+```javascript
+// ✅ Présentation : valide le format et délègue, rien de plus
+app.post('/api/demandes', async (req, res) => {
+  const erreurs = valider(req.body);
+  if (erreurs) return res.status(400).json({ erreurs });
+
+  const resultat = await serviceConges.deposer(req.utilisateur.id, req.body);
+
+  return resultat.succes
+    ? res.status(201).location(`/api/demandes/${resultat.id}`).json(resultat.demande)
+    : res.status(400).json({ message: resultat.message });
+});
+
+// ✅ Métier : les règles de gestion, et rien d'autre — aucune notion de HTTP
+class ServiceConges {
+  constructor(depot, notifieur) {
+    this.depot = depot;
+    this.notifieur = notifieur;
+  }
+
+  async deposer(idSalarie, { debut, fin }) {
+    if (fin < debut) return Resultat.erreur('Dates invalides');
+
+    const solde = await this.depot.soldeDe(idSalarie);
+    if (solde < nbJours(debut, fin)) return Resultat.erreur('Solde insuffisant');
+
+    const demande = await this.depot.inserer(idSalarie, debut, fin);
+    await this.notifieur.prevenirManager(idSalarie);
+    return Resultat.ok(demande);
+  }
 }
 
-// ✅ Service : règles métier uniquement
-public Resultat Deposer(DemandeDto dto)
-{
-    if (dto.Fin < dto.Debut) return Resultat.Erreur("Dates invalides");
-    if (_repo.GetSolde(dto.IdSalarie) < dto.NbJours()) return Resultat.Erreur("Solde insuffisant");
-    _repo.Inserer(dto);
-    _notif.Envoyer(dto.IdSalarie);
-    return Resultat.Ok();
-}
-
-// ✅ Repository : accès données uniquement
-public void Inserer(DemandeDto dto)
-{
-    // requête SQL paramétrée
+// ✅ Accès aux données : uniquement des requêtes paramétrées
+class DepotDemande {
+  async inserer(idSalarie, debut, fin) { /* requête paramétrée */ }
+  async soldeDe(idSalarie)             { /* requête paramétrée */ }
 }
 ```
+
+Le service ne connaît ni les codes HTTP ni le SQL : on peut le tester en lui passant de faux collaborateurs, et le réutiliser depuis une tâche planifiée ou un traitement par lots.
 
 ---
 
@@ -109,35 +123,27 @@ L'intérêt : on peut changer la Vue (passer d'un site web à une appli mobile) 
 
 On a vu que le Controller connaît le Service, et le Service connaît le Repository. Mais concrètement, **comment le Controller reçoit-il le Service** ? Et comment peut-on changer l'implémentation sans tout modifier ?
 
-La réponse est l'**injection de dépendances** (*Dependency Injection*) : plutôt que de créer les dépendances lui-même (`new ServiceConges()`), chaque composant les **reçoit dans son constructeur**. Le framework (ASP.NET Core) s'occupe de les fournir automatiquement.
+La réponse est l'**injection de dépendances** (*Dependency Injection*) : plutôt que de créer ses dépendances lui-même, chaque composant les **reçoit à sa construction**. L'assemblage est décidé ailleurs, en un seul endroit.
 
-```csharp
-// ← Le Controller ne crée pas le Service — il le reçoit
-public class DemandesController : ControllerBase
-{
-    private readonly IServiceConges _service;
-
-    public DemandesController(IServiceConges service) // ← injection ici
-    {
-        _service = service;
-    }
+```javascript
+// ← Chaque composant DÉCLARE ce dont il a besoin, il ne le fabrique pas
+class ServiceConges {
+  constructor(depot, notifieur) {   // ← injection ici
+    this.depot = depot;
+    this.notifieur = notifieur;
+  }
 }
 
-// ← Le Service reçoit le Repository de la même façon
-public class ServiceConges
-{
-    private readonly IDemandeRepository _repo;
+// ← L'assemblage se fait à un seul endroit, au démarrage de l'application
+const depot     = new DepotDemande(connexionBase);
+const notifieur = new NotifieurEmail(configSmtp);
+const service   = new ServiceConges(depot, notifieur);
 
-    public ServiceConges(IDemandeRepository repo) // ← injection ici
-    {
-        _repo = repo;
-    }
-}
-
-// ← On configure une seule fois : "quand quelqu'un demande IServiceConges, donne-lui ServiceConges"
-builder.Services.AddScoped<IServiceConges, ServiceConges>();
-builder.Services.AddScoped<IDemandeRepository, DemandeRepository>();
+// ← En test, on remplace les collaborateurs sans toucher au service
+const serviceDeTest = new ServiceConges(new DepotEnMemoire(), new NotifieurMuet());
 ```
+
+Sur un projet plus gros, un conteneur d'injection automatise cet assemblage : on lui déclare une fois « quand on demande ce contrat, fournis cette implémentation » et il construit le graphe d'objets tout seul. Le principe reste celui-ci.
 
 **Avantages :**
 - En test, on peut injecter un faux service (`FakeDemandeRepository`) sans toucher au code
@@ -153,7 +159,7 @@ Sur le plan déploiement, on parle d'architecture **3-tiers** :
 ```
 ┌──────────────┐      HTTP/HTTPS      ┌──────────────────┐      SQL      ┌──────────┐
 │   Client     │ ──────────────────► │   Serveur API     │ ────────────► │   BDD    │
-│ (navigateur) │ ◄────────────────── │  (ASP.NET Core)   │ ◄──────────── │ (SQL Srv)│
+│ (navigateur) │ ◄────────────────── │  (API HTTP)       │ ◄──────────── │ (SGBD)   │
 └──────────────┘     JSON            └──────────────────┘               └──────────┘
      Tier 1               Tier 2 (applicatif)                 Tier 3 (données)
 ```
@@ -180,47 +186,56 @@ On les classe en trois familles.
 
 **Singleton — une seule instance pour toute l'application**
 
-```csharp
+```javascript
 // Une configuration, un cache, un pool de connexions : un seul exemplaire suffit.
-builder.Services.AddSingleton<IConfigurationCache, ConfigurationCache>();
+// En JavaScript, un module exporte naturellement une instance unique.
+export const configuration = chargerConfiguration();
 ```
 
-En ASP.NET Core, on n'écrit plus le patron à la main : le conteneur d'injection de dépendances le fournit avec `AddSingleton`. À utiliser avec prudence — un singleton porte un état global partagé, donc il doit être conçu pour l'accès concurrent.
+On l'écrit rarement à la main : un module qui exporte une instance, ou un conteneur d'injection configuré en « instance unique », suffit. À utiliser avec prudence — un singleton porte un état global partagé, donc il doit être conçu pour l'accès concurrent.
 
 **Factory — déléguer la création à une méthode dédiée**
 
-```csharp
-public class Resultat
-{
-    public bool   Succes  { get; private set; }
-    public string Message { get; private set; } = "";
+```javascript
+class Resultat {
+  #constructeurPrive = true;         // on ne construit pas cet objet directement
 
-    private Resultat() { }   // ← constructeur fermé
+  constructor(succes, message = '', demande = null) {
+    this.succes = succes;
+    this.message = message;
+    this.demande = demande;
+    Object.freeze(this);             // objet figé : personne ne le modifiera après coup
+  }
 
-    // Méthodes de fabrique : le nom dit l'intention
-    public static Resultat Ok()                  => new() { Succes = true };
-    public static Resultat Erreur(string msg)    => new() { Succes = false, Message = msg };
+  // Méthodes de fabrique : le nom dit l'intention
+  static ok(demande)   { return new Resultat(true, '', demande); }
+  static erreur(msg)   { return new Resultat(false, msg); }
 }
 ```
+
+`Resultat.erreur('Solde insuffisant')` se lit mieux que `new Resultat(false, 'Solde insuffisant')`, et surtout il devient impossible de fabriquer un objet incohérent — un échec sans message, par exemple.
 
 `Resultat.Erreur("Solde insuffisant")` se lit mieux que `new Resultat(false, "Solde insuffisant")`, et empêche de construire un objet incohérent.
 
 **Strategy — interchanger un algorithme**
 
-```csharp
-public interface ICalculSolde { decimal Calculer(Salarie s); }
+```javascript
+// Le contrat : toute stratégie sait calculer un solde à partir d'un salarié
+class CalculStandard { calculer(salarie) { /* 25 jours par an */ } }
+class CalculCadre    { calculer(salarie) { /* 25 jours + jours de repos */ } }
 
-public class CalculStandard : ICalculSolde { /* 25 jours par an */ }
-public class CalculCadre    : ICalculSolde { /* 25 jours + RTT   */ }
+// Le service reçoit la stratégie : ajouter un mode de calcul n'oblige pas
+// à modifier le service (principe ouvert/fermé).
+class ServiceConges {
+  constructor(calculSolde) { this.calculSolde = calculSolde; }
+}
 
-// Le Service reçoit la stratégie : ajouter un nouveau mode de calcul
-// n'oblige pas à modifier le Service (principe Open/Closed).
-public class ServiceConges(ICalculSolde calcul) { /* ... */ }
+new ServiceConges(new CalculCadre());
 ```
 
 **Observer — notifier plusieurs abonnés d'un événement**
 
-Quand une demande est validée, plusieurs choses doivent se produire : envoyer un e-mail, écrire un journal, mettre à jour un tableau de bord. Plutôt que d'empiler les appels dans le Service, celui-ci publie un événement et les abonnés réagissent chacun de leur côté. C'est le patron derrière les `event` C# et les systèmes de messages.
+Quand une demande est validée, plusieurs choses doivent se produire : envoyer un e-mail, écrire un journal, mettre à jour un tableau de bord. Plutôt que d'empiler les appels dans la couche métier, celle-ci publie un événement et les abonnés réagissent chacun de leur côté. C'est le patron derrière les émetteurs d'événements et les files de messages.
 
 **Repository — isoler l'accès aux données**
 

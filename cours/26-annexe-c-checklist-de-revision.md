@@ -23,9 +23,9 @@
 
 **Développement**
 
-- [ ] Les quatre piliers de la POO, chacun avec un exemple en C#.
-- [ ] `public` / `private` / `protected` / `internal` / `static` ; classe abstraite contre interface.
-- [ ] Redéfinition (`override`) contre masquage (`new`) ; type valeur contre type référence.
+- [ ] Les quatre piliers de la POO, chacun avec un exemple de code.
+- [ ] Les niveaux de visibilité et les membres statiques ; classe abstraite contre interface.
+- [ ] Redéfinition contre masquage, et la liaison tardive ; copie de valeur contre copie de référence.
 - [ ] Composition contre héritage, et le test « est un / a un ».
 - [ ] Les cinq principes SOLID, chacun avec un contre-exemple.
 - [ ] Les patrons de conception : Singleton, Factory, Strategy, Observer, Repository.

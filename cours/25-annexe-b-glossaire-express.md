@@ -27,7 +27,7 @@
 | Index | Structure qui accélère les lectures et ralentit les écritures |
 | Normalisation | Organisation des tables en 1NF, 2NF, 3NF pour supprimer la redondance |
 | NoSQL | Bases non relationnelles : document, clé-valeur, colonnes, graphe |
-| ORM | Object-Relational Mapping — pont entre objets et tables (Entity Framework Core) |
+| ORM | Object-Relational Mapping — pont entre les objets du code et les tables de la base |
 | Procédure stockée | Bloc SQL nommé, enregistré et exécutable dans la base |
 | Trigger | Bloc SQL déclenché automatiquement par un INSERT, UPDATE ou DELETE |
 | Vue | Requête stockée, interrogeable comme une table |

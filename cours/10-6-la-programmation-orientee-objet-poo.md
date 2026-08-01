@@ -9,18 +9,19 @@ Pourquoi utiliser des classes ?
 - **Lisibilité** : le code est organisé par concept métier (`Eleve`, `Demande`, `Salarie`…).
 - **Réutilisabilité** : une classe définie une fois peut être instanciée autant de fois qu'on veut, partout dans le projet.
 
-```csharp
+```javascript
 // Une classe, c'est un moule...
-public class Eleve
-{
-    public string Nom       { get; set; }
-    public string Prenom    { get; set; }
-    public DateOnly DateNaissance { get; set; }
+class Eleve {
+  constructor(nom, prenom, dateNaissance) {
+    this.nom = nom;
+    this.prenom = prenom;
+    this.dateNaissance = dateNaissance;
+  }
 }
 
 // ...dont on crée autant d'objets qu'on veut
-Eleve eleve1 = new Eleve();
-Eleve eleve2 = new Eleve();
+const eleve1 = new Eleve('Dumont', 'Alice', '2004-03-12');
+const eleve2 = new Eleve('Nadir', 'Sofiane', '2003-11-02');
 // eleve1 et eleve2 sont deux objets indépendants, issus du même moule
 ```
 
@@ -36,15 +37,15 @@ Eleve eleve2 = new Eleve();
 | **Instanciation** | Déclarer **et** initialiser en une seule opération (`Eleve unEleve = new Eleve()`) |
 | **Objet** | Une **instance** concrète créée à partir d'une classe |
 
-```csharp
-Eleve unEleve;                   // Déclaration   — la variable existe en mémoire, sans valeur
-unEleve = new Eleve();           // Initialisation — on lui donne sa première valeur
+```javascript
+let unEleve;                       // Déclaration    — la variable existe, sans valeur
+unEleve = new Eleve('Dumont');     // Initialisation — on lui donne sa première valeur
 
-// Affectation d'une propriété (donne une valeur, mais ce n'est pas la "première valeur" de la variable)
-unEleve.Nom = "Dumont";
+// Affectation d'un attribut : on change une valeur, pas la « première valeur »
+unEleve.nom = 'Nadir';
 
-// Instanciation : déclaration + initialisation en une ligne
-Eleve autreEleve = new Eleve();
+// Instanciation : déclaration et création en une seule ligne
+const autreEleve = new Eleve('Martin');
 ```
 
 ---
@@ -53,37 +54,43 @@ Eleve autreEleve = new Eleve();
 
 Les **attributs** sont les données propres à chaque objet. Une **méthode** est une fonction définie à l'intérieur de la classe — elle agit sur les attributs ou effectue un calcul.
 
-```csharp
-public class Eleve
-{
-    // Attributs (propriétés)
-    public string  Nom           { get; set; }
-    public string  Prenom        { get; set; }
-    public DateOnly DateNaissance { get; set; }
-    public string  AdresseUn     { get; set; }
-    public string  AdresseDeux   { get; set; }
-    public string  CodePostal    { get; set; }
-    public string  Ville         { get; set; }
+```javascript
+class Eleve {
+  constructor(nom, prenom, dateNaissance) {
+    // Attributs : ce que l'objet SAIT
+    this.nom = nom;
+    this.prenom = prenom;
+    this.dateNaissance = dateNaissance;
+    this.adresse = '';
+    this.codePostal = '';
+    this.ville = '';
+  }
 
-    // Méthode : une fonction définie dans la classe
-    public int CalculerAge(DateOnly laDateNaissance)
-    {
-        var dateJour = DateOnly.FromDateTime(DateTime.Now);
-        int age = dateJour.Year - laDateNaissance.Year;
-        // Correction si l'anniversaire n'est pas encore passé cette année
-        if (laDateNaissance > dateJour.AddYears(-age)) age--;
-        return age;
-    }
+  // Méthode : ce que l'objet SAIT FAIRE
+  calculerAge() {
+    const naissance = new Date(this.dateNaissance);
+    const aujourdHui = new Date();
+    let age = aujourdHui.getFullYear() - naissance.getFullYear();
+
+    // Correction si l'anniversaire n'est pas encore passé cette année
+    const anniversairePasse =
+      aujourdHui.getMonth() > naissance.getMonth() ||
+      (aujourdHui.getMonth() === naissance.getMonth() &&
+       aujourdHui.getDate() >= naissance.getDate());
+    if (!anniversairePasse) age--;
+
+    return age;
+  }
 }
 ```
 
 **Utilisation :**
 
-```csharp
-Eleve unEleve = new Eleve();                          // instanciation
-unEleve.Nom  = "Dumont";                             // affectation d'un attribut (propriété)
+```javascript
+const unEleve = new Eleve('Dumont', 'Alice', '2004-03-12');  // instanciation
+unEleve.ville = 'Lille';                                     // affectation d'un attribut
 
-int sonAge = unEleve.CalculerAge(unEleve.DateNaissance); // appel de méthode avec paramètre
+const sonAge = unEleve.calculerAge();                        // appel de méthode
 ```
 
 ---
@@ -95,41 +102,41 @@ L'**encapsulation** consiste à contrôler qui peut accéder aux données d'un o
 | Modificateur | Portée |
 | --- | --- |
 | `public` | Accessible de partout |
-| `internal` | Visible uniquement dans le projet (l'assembly) |
+| *interne au module* | Visible uniquement dans le projet (nom variable selon le langage) |
 | `protected` | Accessible dans la classe et ses classes enfants uniquement |
 | `private` | Visible uniquement dans la classe elle-même |
 | `static` | Rend l'élément accessible et utilisable sans avoir besoin d'instancier la classe |
 
-```csharp
-public class CompteBancaire
-{
-    private decimal _solde;          // private : personne ne peut lire _solde directement
+```javascript
+class CompteBancaire {
+  #solde = 0;              // le # marque un champ privé : inaccessible de l'extérieur
 
-    public decimal Solde => _solde;  // public : on expose la lecture, mais pas l'écriture
+  get solde() {            // on expose la lecture...
+    return this.#solde;
+  }
 
-    public void Deposer(decimal montant)
-    {
-        if (montant > 0) _solde += montant; // seule la classe modifie _solde
-    }
+  deposer(montant) {       // ...mais l'écriture passe par une méthode qui contrôle
+    if (montant > 0) this.#solde += montant;
+  }
 }
 
-// Utilisation
-var compte = new CompteBancaire();
-compte.Deposer(500);
-Console.WriteLine(compte.Solde); // 500 ✅
-// compte._solde = -9999;        // ❌ erreur : _solde est private
+const compte = new CompteBancaire();
+compte.deposer(500);
+console.log(compte.solde);   // 500 ✅
+compte.solde = -9999;        // ❌ sans effet : aucun accesseur en écriture
 ```
+
+La syntaxe du champ privé change selon le langage — `#champ` en JavaScript, `private` en C#, en Java ou en PHP, convention du préfixe `_` en Python — mais l'intention est la même : **rendre impossible un état incohérent**.
 
 **`static` en pratique :**
 
-```csharp
-public class MathUtils
-{
-    // Méthode statique : pas besoin de faire new MathUtils()
-    public static int Max(int a, int b) => a > b ? a : b;
+```javascript
+class OutilsMath {
+  // Méthode statique : appartient à la classe, pas aux instances
+  static max(a, b) { return a > b ? a : b; }
 }
 
-int resultat = MathUtils.Max(10, 42); // appelé directement sur la classe
+const resultat = OutilsMath.max(10, 42);   // appelée sur la classe, sans new
 ```
 
 > **💡 Bonne pratique :** les attributs sont `private`, exposés via des propriétés `public`. Cela permet de valider une valeur avant de l'affecter, ou de la rendre en lecture seule.
@@ -142,39 +149,28 @@ Le **constructeur** est une méthode particulière qui porte **le même nom que 
 
 La **surcharge** (*overload*) permet d'avoir **plusieurs versions d'une méthode avec le même nom** dans une même classe. Pour les distinguer, on change les arguments (nombre ou types). C'est particulièrement utile sur les constructeurs.
 
-```csharp
-public class Demande
-{
-    public DateOnly Debut     { get; }
-    public DateOnly Fin       { get; }
-    public string   Statut    { get; } = "EN_ATTENTE";
-    public int      IdSalarie { get; }
+```javascript
+class Demande {
+  constructor(idSalarie, debut, fin = debut) {
+    this.idSalarie = idSalarie;
+    this.debut = debut;
+    this.fin = fin;              // absente → congé d'un seul jour
+    this.statut = 'EN_ATTENTE';
+  }
 
-    // Constructeur 1 : avec une plage de dates
-    public Demande(int idSalarie, DateOnly debut, DateOnly fin)
-    {
-        IdSalarie = idSalarie;
-        Debut     = debut;
-        Fin       = fin;
-    }
+  // Méthode de fabrique : le nom dit l'intention mieux qu'un paramètre de plus
+  static pourUnJour(idSalarie, jour) {
+    return new Demande(idSalarie, jour, jour);
+  }
 
-    // Surcharge : même nom, arguments différents — pour un jour unique
-    public Demande(int idSalarie, DateOnly jourUnique)
-    {
-        IdSalarie = idSalarie;
-        Debut     = jourUnique;
-        Fin       = jourUnique;
-    }
-
-    // Surcharge de méthode ordinaire
-    public int NbJours() => (Fin.DayNumber - Debut.DayNumber) + 1;
-    public int NbJours(DateOnly debut, DateOnly fin) => (fin.DayNumber - debut.DayNumber) + 1;
+  nbJours() { return joursEntre(this.debut, this.fin) + 1; }
 }
 
-// Les deux constructeurs sont utilisables
-var d1 = new Demande(42, new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 15));
-var d2 = new Demande(42, new DateOnly(2026, 8, 15)); // jour unique
+const d1 = new Demande(42, '2026-07-01', '2026-07-15');
+const d2 = Demande.pourUnJour(42, '2026-08-15');
 ```
+
+**Surcharge ou paramètres par défaut ?** Les langages à surcharge (C#, Java) déclarent plusieurs constructeurs de signatures différentes. JavaScript et Python obtiennent le même résultat avec des valeurs par défaut ou des méthodes de fabrique nommées. Le besoin est identique : offrir plusieurs façons d'initialiser un objet selon les informations disponibles.
 
 ---
 
@@ -182,31 +178,33 @@ var d2 = new Demande(42, new DateOnly(2026, 8, 15)); // jour unique
 
 L'**héritage** permet à une classe **enfant** de récupérer les attributs et méthodes d'une classe **parent**, puis de les enrichir. On évite la duplication de code.
 
-```csharp
+```javascript
 // Classe parent
-public class Personne
-{
-    public string Nom   { get; set; } = "";
-    public string Email { get; set; } = "";
+class Personne {
+  constructor(nom, email) {
+    this.nom = nom;
+    this.email = email;
+  }
 
-    public void SePresenter() => Console.WriteLine($"Je m'appelle {Nom}.");
+  sePresenter() { return `Je m'appelle ${this.nom}.`; }
 }
 
-// Classe enfant : hérite de Personne (syntaxe : EnfantClass : ParentClass)
-public class Salarie : Personne
-{
-    public decimal SoldeConges { get; set; }
-    public string  Service     { get; set; } = "";
+// Classe enfant : hérite de Personne
+class Salarie extends Personne {
+  constructor(nom, email, service) {
+    super(nom, email);           // ← appel du constructeur parent, obligatoire d'abord
+    this.service = service;
+    this.soldeConges = 25;
+  }
 }
 
-// Salarie hérite de Nom, Email et SePresenter()
-Salarie s = new Salarie();
-s.Nom     = "Dumont";   // hérité de Personne
-s.Service = "RH";       // propre à Salarie
-s.SePresenter();        // méthode héritée
+const s = new Salarie('Dumont', 'a.dumont@ent.fr', 'RH');
+s.nom;              // hérité de Personne
+s.service;          // propre à Salarie
+s.sePresenter();    // méthode héritée
 ```
 
-> En C#, une classe ne peut hériter que d'**une seule classe parent**. En revanche, elle peut implémenter plusieurs interfaces.
+> Dans la plupart des langages objet, une classe n'hérite que d'**un seul parent** — pour éviter l'ambiguïté quand deux parents fournissent la même méthode. En revanche, elle peut respecter autant de **contrats** (interfaces) qu'elle veut, puisqu'un contrat n'apporte pas d'implémentation à choisir.
 
 ---
 
@@ -218,37 +216,33 @@ C'est l'un des piliers de la POO. Sans polymorphisme, on serait obligé d'écrir
 
 **Exemple concret — sans polymorphisme :**
 
-```csharp
-// ❌ Sans polymorphisme : on doit tester le type manuellement
-void AfficherPrime(string typeEmploye)
-{
-    if (typeEmploye == "manager")      Console.WriteLine("Prime : 2000€");
-    else if (typeEmploye == "develo")  Console.WriteLine("Prime : 1000€");
-    else if (typeEmploye == "stagia")  Console.WriteLine("Prime : 0€");
-    // Ajouter un type = modifier cette méthode → fragile
+```javascript
+// ❌ Sans polymorphisme : on teste le type à la main
+function afficherPrime(typeEmploye) {
+  if (typeEmploye === 'manager')          return 'Prime : 2000 €';
+  else if (typeEmploye === 'developpeur') return 'Prime : 1000 €';
+  else if (typeEmploye === 'stagiaire')   return 'Prime : 0 €';
+  // Ajouter un type = modifier cette fonction → fragile, et à retester en entier
 }
 ```
 
 **Exemple — avec polymorphisme :**
 
-```csharp
-// On définit la méthode CalculerPrime() dans chaque classe
-public class Manager
-{
-    public string Nom { get; set; } = "";
-    public decimal CalculerPrime() => 2000m;  // comportement propre au Manager
+```javascript
+// Chaque classe porte son propre comportement
+class Manager {
+  constructor(nom) { this.nom = nom; }
+  calculerPrime() { return 2000; }      // comportement propre au manager
 }
 
-public class Developpeur
-{
-    public string Nom { get; set; } = "";
-    public decimal CalculerPrime() => 1000m;  // comportement propre au Developpeur
+class Developpeur {
+  constructor(nom) { this.nom = nom; }
+  calculerPrime() { return 1000; }      // comportement propre au développeur
 }
 
-public class Stagiaire
-{
-    public string Nom { get; set; } = "";
-    public decimal CalculerPrime() => 0m;     // comportement propre au Stagiaire
+class Stagiaire {
+  constructor(nom) { this.nom = nom; }
+  calculerPrime() { return 0; }         // comportement propre au stagiaire
 }
 ```
 
@@ -269,56 +263,58 @@ Une classe abstraite est un **modèle commun à plusieurs classes enfants**. Ell
 
 **Pourquoi « abstraite » ?** Parce qu'un `Employe` seul n'a pas de sens dans notre métier — il est toujours soit un `Manager`, soit un `Developpeur`, soit un `Stagiaire`. On ne peut jamais créer un employé « générique ».
 
-```csharp
-// ← CLASSE ABSTRAITE : modèle commun, ne peut pas être instanciée
-public abstract class Employe
-{
-    // ← Attribut commun à tous les employés
-    public string Nom { get; set; } = "";
+```javascript
+// ← MODÈLE COMMUN : conçu pour être hérité, pas instancié directement
+class Employe {
+  constructor(nom) {
+    if (new.target === Employe) {
+      throw new Error('Employe est un modèle : instanciez une classe fille.');
+    }
+    this.nom = nom;
+  }
 
-    // ← Méthode ABSTRACT : pas de code ici, chaque enfant DOIT la définir
-    //   (chaque type d'employé calcule sa prime différemment)
-    public abstract decimal CalculerPrime();
+  // ← Méthode SANS implémentation : chaque enfant DOIT la fournir
+  calculerPrime() {
+    throw new Error('calculerPrime() doit être implémentée par la classe fille.');
+  }
 
-    // ← Méthode VIRTUAL : a un code par défaut, mais les enfants PEUVENT le changer
-    public virtual string Role() => "Employé";
+  // ← Méthode AVEC une implémentation par défaut : l'enfant peut la redéfinir
+  role() { return 'Employé'; }
 }
 
-// ← CLASSE ENFANT 1 : hérite d'Employe et implémente CalculerPrime()
-public class Manager : Employe
-{
-    // override = "je remplace la version du parent"
-    public override decimal CalculerPrime() => 2000m;   // ← comportement du Manager
-    public override string  Role()          => "Manager"; // ← remplace "Employé"
+// ← CLASSE FILLE 1
+class Manager extends Employe {
+  calculerPrime() { return 2000; }      // implémentation obligatoire
+  role()          { return 'Manager'; } // redéfinition du comportement par défaut
 }
 
-// ← CLASSE ENFANT 2 : hérite d'Employe et implémente CalculerPrime()
-public class Developpeur : Employe
-{
-    public override decimal CalculerPrime() => 1000m;   // ← comportement du Developpeur
-    // Role() non redéfini → reste "Employé" (valeur du parent)
+// ← CLASSE FILLE 2
+class Developpeur extends Employe {
+  calculerPrime() { return 1000; }
+  // role() non redéfini → conserve « Employé »
 }
 
-// ← INTERDIT : Employe est abstraite, on ne peut pas l'instancier
-// new Employe() → ❌ erreur de compilation
+// new Employe('X') → ❌ erreur : le modèle ne s'instancie pas
 ```
+
+En C#, en Java ou en PHP, le mot-clé `abstract` fait respecter cette règle **dès la compilation** : oublier d'implémenter la méthode devient une erreur de compilation, pas un plantage à l'exécution. JavaScript n'a pas ce garde-fou intégré, d'où la vérification écrite à la main ci-dessus.
 
 **Le polymorphisme avec la classe abstraite :**
 
-La classe abstraite + `override` rend le polymorphisme encore plus puissant : on peut manipuler des objets via le type parent `Employe`, et C# appelle automatiquement la bonne version selon l'objet réel.
+Le modèle commun et la redéfinition rendent le polymorphisme pleinement exploitable : on manipule les objets à travers le type parent, et c'est le type réel de chacun qui décide de la version appelée — c'est ce qu'on appelle la liaison tardive.
 
-```csharp
-// ← Les variables sont déclarées comme Employe (type parent)
-//   mais les objets réels sont Manager et Developpeur
-Employe e1 = new Manager     { Nom = "Alice" };   // ← objet réel : Manager
-Employe e2 = new Developpeur { Nom = "Bob"   };   // ← objet réel : Developpeur
+```javascript
+// ← On manipule une liste d'employés, sans savoir de quel type ils sont
+const employes = [new Manager('Alice'), new Developpeur('Bob')];
 
-// ← MÊME appel sur les deux variables
-// ← COMPORTEMENT DIFFÉRENT selon l'objet réel → c'est le polymorphisme
-Console.WriteLine(e1.CalculerPrime()); // → 2000  (version Manager)
-Console.WriteLine(e2.CalculerPrime()); // → 1000  (version Developpeur)
-Console.WriteLine(e1.Role());          // → "Manager"
-Console.WriteLine(e2.Role());          // → "Employé" (version parent, non redéfinie)
+// ← MÊME appel, COMPORTEMENT DIFFÉRENT selon le type réel de l'objet
+for (const e of employes) {
+  console.log(e.nom, e.calculerPrime(), e.role());
+}
+// Alice 2000 "Manager"
+// Bob   1000 "Employé"   ← role() non redéfini : version du parent
+
+// Ajouter un type d'employé n'oblige à modifier aucune de ces lignes.
 ```
 
 ---
@@ -340,45 +336,39 @@ En programmation : si une classe implémente l'interface `INotifiable`, on sait 
 
 Une classe ne peut hériter que d'**une seule classe abstraite**, mais elle peut implémenter **autant d'interfaces qu'elle veut**.
 
-```csharp
-// ← INTERFACE 1 : contrat "peut notifier"
-public interface INotifiable
-{
-    void Notifier(string message);  // ← signature seulement, pas de code
-}
+```javascript
+// Un contrat, c'est un ensemble de méthodes qu'une classe s'engage à fournir.
+// Ici deux contrats indépendants : « sait notifier » et « sait exporter ».
 
-// ← INTERFACE 2 : contrat "peut exporter"
-public interface IExportable
-{
-    byte[] Exporter();              // ← signature seulement, pas de code
-}
+class ServiceConges {
+  // ← Contrat « notifiable »
+  notifier(message) {
+    console.log(`Notification : ${message}`);
+  }
 
-// ← La classe implémente les DEUX interfaces
-//   Elle doit fournir le code pour chaque méthode déclarée
-public class ServiceConges : INotifiable, IExportable
-{
-    // ← Implémentation de INotifiable
-    public void Notifier(string message)
-    {
-        Console.WriteLine($"Notification : {message}");
-    }
-
-    // ← Implémentation de IExportable
-    public byte[] Exporter()
-    {
-        return System.Text.Encoding.UTF8.GetBytes("données exportées...");
-    }
+  // ← Contrat « exportable »
+  exporter() {
+    return Buffer.from('données exportées...');
+  }
 }
 ```
+
+En C#, en Java ou en PHP, ces contrats se déclarent explicitement (`interface INotifiable`) et le compilateur vérifie qu'ils sont respectés — une classe peut en cumuler autant qu'elle veut, alors qu'elle n'hérite que d'un seul parent. En JavaScript, le contrat est implicite : il suffit que l'objet expose les bonnes méthodes. C'est plus souple, et moins protégé.
 
 **Utilisation via l'interface :**
 
-```csharp
-// On déclare la variable avec le type de l'interface, pas la classe concrète
-// → on sait seulement qu'on peut appeler Notifier(), rien d'autre
-INotifiable notif = new ServiceConges();
-notif.Notifier("Votre demande a été validée !");
+```javascript
+// On manipule l'objet à travers ce qu'on attend de lui, pas à travers sa classe.
+// Cette fonction accepte N'IMPORTE QUEL objet qui sait notifier.
+function prevenir(notifiable, message) {
+  notifiable.notifier(message);
+}
+
+prevenir(new ServiceConges(), 'Votre demande a été validée.');
+prevenir(new NotifieurSms(),  'Votre demande a été validée.');
 ```
+
+C'est ce découplage qui permet de remplacer une implémentation par une autre — et, en test, de passer une doublure qui ne fait qu'enregistrer les appels.
 
 **Récapitulatif :**
 
@@ -403,21 +393,16 @@ L'héritage est le premier outil qu'on apprend, et celui dont on abuse le plus. 
 | Changer de comportement | Créer une nouvelle sous-classe | Injecter un autre composant |
 | Risque | Une modification du parent casse tous les enfants | Faible |
 
-```csharp
-// ❌ Héritage abusif : un ServiceConges n'EST PAS un journal
-public class ServiceConges : Logger { }
+```javascript
+// ❌ Héritage abusif : un service de congés n'EST PAS un journal
+class ServiceConges extends Journal { }
 
-// ✅ Composition : un ServiceConges A UN journal
-public class ServiceConges
-{
-    private readonly ILogger _logger;
-    private readonly IDemandeRepository _repo;
-
-    public ServiceConges(ILogger logger, IDemandeRepository repo)
-    {
-        _logger = logger;
-        _repo   = repo;
-    }
+// ✅ Composition : un service de congés A UN journal
+class ServiceConges {
+  constructor(journal, depot) {
+    this.journal = journal;
+    this.depot = depot;
+  }
 }
 ```
 
@@ -429,48 +414,62 @@ Deux symptômes d'héritage mal placé : une sous-classe qui redéfinit une mét
 
 ### 6.10 Types valeur et types référence
 
-En C#, chaque type appartient à l'une des deux familles, et cela change ce qui se passe lors d'une affectation ou d'un passage en paramètre.
+Chaque donnée appartient à l'une des deux familles, et cela change ce qui se passe lors d'une affectation ou d'un passage en paramètre. C'est l'un des points qui piègent le plus souvent, dans tous les langages.
 
 | | **Type valeur** | **Type référence** |
 | --- | --- | --- |
-| Exemples | `int`, `double`, `bool`, `char`, `DateOnly`, `decimal`, `struct`, `enum` | `class`, `string`, tableaux, `List<T>`, `object` |
+| Exemples | nombres, booléens, caractères, dates, énumérations | objets, tableaux, listes, dictionnaires |
 | Ce que contient la variable | La valeur elle-même | L'adresse d'un objet |
 | À l'affectation | La valeur est **copiée** | La **référence** est copiée : deux variables, un seul objet |
 | Valeur par défaut | `0`, `false`… | `null` |
 
-```csharp
-// Type valeur : la copie est indépendante
-int a = 5;
-int b = a;
+```javascript
+// Type simple : la copie est indépendante
+let a = 5;
+let b = a;
 b = 10;
-Console.WriteLine(a);        // 5 — a n'a pas bougé
+console.log(a);              // 5 — a n'a pas bougé
 
-// Type référence : les deux variables désignent le MÊME objet
-var s1 = new Salarie { Nom = "Dumont" };
-var s2 = s1;
-s2.Nom = "Nadir";
-Console.WriteLine(s1.Nom);   // "Nadir" — c'est le même objet
+// Objet : les deux variables désignent le MÊME objet
+const s1 = { nom: 'Dumont' };
+const s2 = s1;
+s2.nom = 'Nadir';
+console.log(s1.nom);         // "Nadir" — c'est le même objet en mémoire
 
-// Conséquence en méthode
-void Renommer(Salarie s) => s.Nom = "Modifié";   // ← modifie l'objet de l'appelant
-void Incrementer(int n)  => n++;                 // ← sans effet chez l'appelant
+// Conséquence sur les paramètres de fonction
+function renommer(salarie) { salarie.nom = 'Modifié'; }  // ← visible chez l'appelant
+function incrementer(n)    { n++; }                      // ← sans effet à l'extérieur
+
+// Piège : réaffecter le paramètre ne change rien à l'extérieur
+function remplacer(salarie) { salarie = { nom: 'Autre' }; }  // ← sans effet
 ```
 
 **Le cas de `string`** est le piège classique : c'est un type **référence**, mais il est **immuable**. Toute « modification » crée en réalité une nouvelle chaîne, ce qui lui donne l'apparence d'un type valeur. C'est aussi pourquoi concaténer dans une boucle est coûteux — on préfère `StringBuilder`.
 
 **Deux mots-clés utiles :**
 
-```csharp
-// enum : un ensemble fermé de valeurs nommées — bien mieux qu'une string libre
-public enum StatutDemande { EnAttente, Validee, Refusee, Annulee }
+```javascript
+// Ensemble fermé de valeurs nommées : plus de faute de frappe possible
+const StatutDemande = Object.freeze({
+  EnAttente: 'EN_ATTENTE',
+  Validee:   'VALIDEE',
+  Refusee:   'REFUSEE',
+  Annulee:   'ANNULEE',
+});
 
-// record : une classe faite pour porter des données, immuable, comparée par valeur
-public record DemandeDto(DateOnly DateDebut, DateOnly DateFin);
+// Objet valeur : figé après création, comparé sur son contenu
+function creerDemandeDto(dateDebut, dateFin) {
+  return Object.freeze({ dateDebut, dateFin });
+}
 
-var d1 = new DemandeDto(new(2026, 7, 1), new(2026, 7, 15));
-var d2 = new DemandeDto(new(2026, 7, 1), new(2026, 7, 15));
-Console.WriteLine(d1 == d2);   // true — comparaison par valeur, pas par référence
+const d1 = creerDemandeDto('2026-07-01', '2026-07-15');
+const d2 = creerDemandeDto('2026-07-01', '2026-07-15');
+
+console.log(d1 === d2);                                  // false — deux objets distincts
+console.log(JSON.stringify(d1) === JSON.stringify(d2));  // true  — même contenu
 ```
+
+**Par défaut, comparer deux objets revient à demander « est-ce le même exemplaire ? »**, pas « ont-ils le même contenu ». Certains langages fournissent un type dédié qui compare par valeur — `record` en C# et en Java, `dataclass` en Python. En JavaScript, on l'obtient en comparant explicitement les champs, ou via une bibliothèque.
 
 Remplacer `string Statut` par `StatutDemande Statut` supprime d'un coup toute une famille de bugs : plus de faute de frappe, plus de valeur inattendue, et le compilateur vérifie l'exhaustivité des `switch`.
 
@@ -478,19 +477,21 @@ Remplacer `string Statut` par `StatutDemande Statut` supprime d'un coup toute un
 
 ### 6.11 Documenter le code
 
-En C#, le triple slash `///` génère un bloc de documentation structuré, exploité par l'IDE (IntelliSense) et les outils de génération de doc.
+Un commentaire de documentation structuré, placé juste au-dessus d'une fonction, est exploité par l'éditeur pour l'aide contextuelle et par les outils de génération de documentation.
 
-```csharp
-/// <summary>
-/// Calcule l'âge de l'élève à partir de sa date de naissance.
-/// </summary>
-/// <param name="laDateNaissance">La date de naissance de l'élève.</param>
-/// <returns>L'âge en années révolues.</returns>
-public int CalculerAge(DateOnly laDateNaissance)
-{
-    // ...
+```javascript
+/**
+ * Calcule l'âge de l'élève à partir de sa date de naissance.
+ *
+ * @param {string} dateNaissance - Date au format ISO (AAAA-MM-JJ).
+ * @returns {number} L'âge en années révolues.
+ */
+calculerAge(dateNaissance) {
+  // ...
 }
 ```
+
+Ce format de commentaire structuré existe partout : JSDoc en JavaScript, commentaires XML en C#, Javadoc en Java, docstrings en Python. L'éditeur l'exploite pour l'aide contextuelle, et un outil peut en générer une documentation complète.
 
 > **📌 Les quatre piliers de la POO**
 >

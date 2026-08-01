@@ -1,76 +1,133 @@
-import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Outlet, useLocation, Link } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import Icone from './Icone';
 import { useCoursIndex } from '../hooks/useCours';
+import { useProgression } from '../hooks/useProgression';
+import { useTheme } from '../hooks/useTheme';
+
+function BasculeTheme() {
+  const { mode, basculer } = useTheme();
+  const libelle =
+    mode === 'clair' ? 'Thème clair' : mode === 'sombre' ? 'Thème sombre' : 'Thème du système';
+
+  return (
+    <button
+      type="button"
+      onClick={basculer}
+      title={libelle}
+      aria-label={`${libelle} — cliquer pour changer`}
+      className="rounded-lg p-2 text-ardoise-500 transition-colors hover:bg-ardoise-100 hover:text-ardoise-800 dark:text-ardoise-400 dark:hover:bg-ardoise-800 dark:hover:text-ardoise-100"
+    >
+      <Icone nom={mode === 'clair' ? 'soleil' : mode === 'sombre' ? 'lune' : 'ecran'} />
+    </button>
+  );
+}
+
+function Marque() {
+  return (
+    <Link to="/" className="flex items-center gap-2.5">
+      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-encre-600 text-sm font-black text-white">
+        CDA
+      </span>
+      <span className="leading-tight">
+        <span className="block text-[15px] font-bold text-ardoise-900 dark:text-white">
+          Révision CDA
+        </span>
+        <span className="block text-[11px] text-ardoise-500 dark:text-ardoise-400">Promo 2026</span>
+      </span>
+    </Link>
+  );
+}
 
 export default function Layout() {
   const { chapitres } = useCoursIndex();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { erreurs } = useProgression();
+  const [menuOuvert, setMenuOuvert] = useState(false);
+  const { pathname } = useLocation();
+
+  // Le contenu principal remonte en haut à chaque changement de page.
+  useEffect(() => {
+    document.getElementById('contenu')?.scrollTo({ top: 0 });
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOuvert) return;
+    const fermerSurEchap = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOuvert(false);
+    };
+    window.addEventListener('keydown', fermerSurEchap);
+    return () => window.removeEventListener('keydown', fermerSurEchap);
+  }, [menuOuvert]);
+
+  const barreLaterale = (
+    <>
+      <div className="flex items-center justify-between border-b border-ardoise-200 px-4 py-3 dark:border-ardoise-800">
+        <Marque />
+        <div className="flex items-center gap-1">
+          <BasculeTheme />
+          <button
+            type="button"
+            onClick={() => setMenuOuvert(false)}
+            aria-label="Fermer le menu"
+            className="rounded-lg p-2 text-ardoise-500 hover:bg-ardoise-100 lg:hidden dark:hover:bg-ardoise-800"
+          >
+            <Icone nom="fermer" />
+          </button>
+        </div>
+      </div>
+      <div className="min-h-0 flex-1">
+        <Sidebar
+          chapitres={chapitres}
+          nbErreurs={erreurs.length}
+          onNaviguer={() => setMenuOuvert(false)}
+        />
+      </div>
+    </>
+  );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
-      {/* Sidebar desktop */}
-      <aside className="hidden lg:flex flex-col w-72 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-        <div className="px-4 py-4 border-b border-gray-200 dark:border-gray-800">
-          <h1 className="text-lg font-bold text-purple-700 dark:text-purple-400">
-            Révision CDA
-          </h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Promo 2026</p>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          <Sidebar chapitres={chapitres} />
-        </div>
+    <div className="flex h-dvh overflow-hidden bg-ardoise-50 dark:bg-ardoise-950">
+      <aside className="hidden w-72 shrink-0 flex-col border-r border-ardoise-200 bg-white lg:flex dark:border-ardoise-800 dark:bg-ardoise-900">
+        {barreLaterale}
       </aside>
 
-      {/* Mobile overlay */}
-      {sidebarOpen && (
+      {menuOuvert && (
         <div
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={() => setMenuOuvert(false)}
+          aria-hidden="true"
         />
       )}
 
-      {/* Sidebar mobile */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-72 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-200 lg:hidden ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-ardoise-200 bg-white transition-transform duration-200 lg:hidden dark:border-ardoise-800 dark:bg-ardoise-900 ${
+          menuOuvert ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="px-4 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-purple-700 dark:text-purple-400">
-            Révision CDA
-          </h1>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          <Sidebar chapitres={chapitres} onClose={() => setSidebarOpen(false)} />
-        </div>
+        {barreLaterale}
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Mobile header */}
-        <div className="lg:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center gap-3 border-b border-ardoise-200 bg-white px-4 py-2.5 lg:hidden dark:border-ardoise-800 dark:bg-ardoise-900">
           <button
-            onClick={() => setSidebarOpen(true)}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+            type="button"
+            onClick={() => setMenuOuvert(true)}
+            aria-label="Ouvrir le menu"
+            className="rounded-lg p-2 text-ardoise-600 hover:bg-ardoise-100 dark:text-ardoise-400 dark:hover:bg-ardoise-800"
           >
-            ☰
+            <Icone nom="menu" />
           </button>
-          <span className="font-semibold text-purple-700 dark:text-purple-400">
-            Révision CDA
-          </span>
-        </div>
+          <div className="flex-1">
+            <Marque />
+          </div>
+          <BasculeTheme />
+        </header>
 
-        <div className="flex-1 overflow-y-auto">
+        <main id="contenu" className="flex-1 overflow-y-auto">
           <Outlet />
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

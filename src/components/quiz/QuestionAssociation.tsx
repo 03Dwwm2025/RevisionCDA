@@ -1,64 +1,79 @@
 import { useState } from 'react';
-import type { QuestionAssociation as AssocType } from '../../types/quiz';
+import type { QuestionAssociation as TypeAssoc } from '../../types/quiz';
+import Icone from '../Icone';
+import TexteRiche from './TexteRiche';
 
 interface Props {
-  question: AssocType;
-  shuffledRight: string[];
-  submittedAnswer?: Record<string, string>;
-  onAnswer: (answer: Record<string, string>) => void;
+  question: TypeAssoc;
+  droitesMelangees: string[];
+  reponseValidee?: Record<string, string>;
+  onRepondre: (reponse: Record<string, string>) => void;
 }
 
 export default function QuestionAssociation({
   question,
-  shuffledRight,
-  submittedAnswer,
-  onAnswer,
+  droitesMelangees,
+  reponseValidee,
+  onRepondre,
 }: Props) {
-  const [selections, setSelections] = useState<Record<string, string>>({});
-  const inCorrection = submittedAnswer !== undefined;
-  const current = inCorrection ? submittedAnswer : selections;
-  const allSelected = question.paires.every((p) => current[p.gauche]);
+  const [choix, setChoix] = useState<Record<string, string>>({});
+  const enCorrection = reponseValidee !== undefined;
+  const courant = enCorrection ? reponseValidee : choix;
+  const toutRempli = question.paires.every((p) => courant[p.gauche]);
 
   return (
     <div className="space-y-3">
-      {question.paires.map((p) => {
-        const userChoice = current[p.gauche] ?? '';
-        const isCorrect = inCorrection && userChoice === p.droite;
-        const isWrong = inCorrection && userChoice !== p.droite;
+      {question.paires.map((paire) => {
+        const valeur = courant[paire.gauche] ?? '';
+        const juste = enCorrection && valeur === paire.droite;
 
         return (
-          <div key={p.gauche} className="flex items-start gap-2">
-            <div className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm font-medium text-gray-800 dark:text-gray-200 self-center">
-              {p.gauche}
+          <div key={paire.gauche} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.4fr)] sm:items-center">
+            <div className="rounded-xl bg-ardoise-100 px-3.5 py-2.5 text-sm font-semibold text-ardoise-800 dark:bg-ardoise-800 dark:text-ardoise-200">
+              <TexteRiche>{paire.gauche}</TexteRiche>
             </div>
-            <span className="text-gray-400 self-center shrink-0">→</span>
-            {!inCorrection ? (
-              <select
-                value={userChoice}
-                onChange={(e) =>
-                  setSelections((prev) => ({ ...prev, [p.gauche]: e.target.value }))
-                }
-                className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 rounded-lg text-sm"
-              >
-                <option value="">— choisir —</option>
-                {shuffledRight.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
+
+            <Icone
+              nom="droite"
+              className="hidden h-4 w-4 shrink-0 text-ardoise-400 sm:block"
+            />
+
+            {!enCorrection ? (
+              <label className="block">
+                <span className="sr-only">Correspondance pour {paire.gauche}</span>
+                <select
+                  value={valeur}
+                  onChange={(e) =>
+                    setChoix((prec) => ({ ...prec, [paire.gauche]: e.target.value }))
+                  }
+                  className="w-full rounded-xl border border-ardoise-300 bg-white px-3 py-2.5 text-sm text-ardoise-800 transition-colors hover:border-encre-400 dark:border-ardoise-700 dark:bg-ardoise-950 dark:text-ardoise-200"
+                >
+                  <option value="">— choisir —</option>
+                  {droitesMelangees.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </label>
             ) : (
               <div
-                className={`flex-1 px-3 py-2 rounded-lg text-sm border ${
-                  isCorrect
-                    ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200'
-                    : 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200'
+                className={`rounded-xl border px-3.5 py-2.5 text-sm ${
+                  juste
+                    ? 'border-emerald-400 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200'
+                    : 'border-rose-400 bg-rose-50 text-rose-800 dark:border-rose-700 dark:bg-rose-500/10 dark:text-rose-200'
                 }`}
               >
-                {userChoice || '—'}
-                {isWrong && (
-                  <span className="block text-xs text-green-600 dark:text-green-400 mt-0.5">
-                    ✓ {p.droite}
+                <span className="flex items-start gap-2">
+                  <Icone
+                    nom={juste ? 'coche' : 'croix'}
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                  />
+                  <span>{valeur ? <TexteRiche>{valeur}</TexteRiche> : '(sans réponse)'}</span>
+                </span>
+                {!juste && (
+                  <span className="mt-1.5 block text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                    Attendu : <TexteRiche>{paire.droite}</TexteRiche>
                   </span>
                 )}
               </div>
@@ -67,11 +82,12 @@ export default function QuestionAssociation({
         );
       })}
 
-      {!inCorrection && (
+      {!enCorrection && (
         <button
-          onClick={() => onAnswer({ ...selections })}
-          disabled={!allSelected}
-          className="mt-1 w-full py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors text-sm"
+          type="button"
+          onClick={() => onRepondre({ ...choix })}
+          disabled={!toutRempli}
+          className="btn btn-principal mt-2 w-full"
         >
           Valider
         </button>

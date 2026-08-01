@@ -1,21 +1,33 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Accueil from './pages/Accueil';
-import LectureChapitre from './pages/LectureChapitre';
-import QuizTheme from './pages/QuizTheme';
-import ModeExamen from './pages/ModeExamen';
+
+// Les pages de quiz embarquent tout le lot de questions : on les charge à la
+// demande pour que l'accueil et la lecture du cours restent légers.
+const LectureChapitre = lazy(() => import('./pages/LectureChapitre'));
+const QuizTheme = lazy(() => import('./pages/QuizTheme'));
+const ModeExamen = lazy(() => import('./pages/ModeExamen'));
+const RevisionErreurs = lazy(() => import('./pages/RevisionErreurs'));
+
+function Attente() {
+  return <div className="flex h-64 items-center justify-center text-ardoise-400">Chargement…</div>;
+}
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<Accueil />} />
-          <Route path="cours/:slug" element={<LectureChapitre />} />
-          <Route path="quiz/:slug" element={<QuizTheme />} />
-          <Route path="examen" element={<ModeExamen />} />
-        </Route>
-      </Routes>
+      <Suspense fallback={<Attente />}>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route index element={<Accueil />} />
+            <Route path="cours/:slug" element={<LectureChapitre />} />
+            <Route path="quiz/:slug" element={<QuizTheme />} />
+            <Route path="examen" element={<ModeExamen />} />
+            <Route path="erreurs" element={<RevisionErreurs />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

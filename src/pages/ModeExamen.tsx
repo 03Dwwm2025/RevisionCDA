@@ -1,54 +1,66 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import QuizEngine from '../components/quiz/QuizEngine';
 import { getAllQuestions } from '../data/questions';
-import { shuffle } from '../utils/shuffle';
+import { tirageStratifie } from '../utils/tirage';
+import Icone from '../components/Icone';
 
-const EXAM_QUESTION_COUNT = 20;
-const EXAM_DURATION_SECONDS = 30 * 60;
+const NB_QUESTIONS = 25;
+const DUREE_SECONDES = 30 * 60;
 
 export default function ModeExamen() {
-  const navigate = useNavigate();
-  const [started, setStarted] = useState(false);
-  const [examKey, setExamKey] = useState(0);
+  const [demarre, setDemarre] = useState(false);
+  const [tirage, setTirage] = useState(0);
 
-  const questions = useMemo(() => {
-    const all = getAllQuestions();
-    return shuffle(all).slice(0, EXAM_QUESTION_COUNT);
+  const questions = useMemo(
+    () => tirageStratifie(getAllQuestions(), NB_QUESTIONS),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [examKey]);
+    [tirage],
+  );
 
-  if (!started) {
+  if (!demarre) {
+    const themes = new Set(questions.map((q) => q.theme)).size;
+
     return (
-      <div className="max-w-lg mx-auto px-6 py-12 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full mb-6 text-3xl">
-          ⏱
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          Mode examen
-        </h2>
-        <p className="text-gray-500 dark:text-gray-400 mb-6 text-sm leading-relaxed">
-          {questions.length} question{questions.length > 1 ? 's' : ''} tirées
-          aléatoirement dans tous les thèmes.
-          <br />
-          Durée : <strong className="text-gray-700 dark:text-gray-300">30 minutes</strong>.
-          <br />
-          Correction et récapitulatif des erreurs à la fin.
+      <div className="anim-entree mx-auto max-w-lg px-6 py-16 text-center">
+        <span className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400">
+          <Icone nom="chrono" className="h-8 w-8" />
+        </span>
+
+        <h1 className="mb-3 text-3xl font-bold tracking-tight text-ardoise-900 dark:text-white">
+          Examen blanc
+        </h1>
+        <p className="mb-8 leading-relaxed text-ardoise-600 dark:text-ardoise-400">
+          {NB_QUESTIONS} questions tirées sur {themes} thèmes, en 30 minutes chrono. Le tirage
+          équilibre les thèmes : aucun ne domine la série. Correction et bilan des erreurs à la fin.
         </p>
 
+        <dl className="carte mb-8 grid grid-cols-3 divide-x divide-ardoise-200 p-4 text-center dark:divide-ardoise-800">
+          <div>
+            <dt className="text-xs text-ardoise-500 dark:text-ardoise-400">Questions</dt>
+            <dd className="text-xl font-bold tabular-nums text-ardoise-900 dark:text-white">
+              {NB_QUESTIONS}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-ardoise-500 dark:text-ardoise-400">Durée</dt>
+            <dd className="text-xl font-bold tabular-nums text-ardoise-900 dark:text-white">30 min</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-ardoise-500 dark:text-ardoise-400">Thèmes</dt>
+            <dd className="text-xl font-bold tabular-nums text-ardoise-900 dark:text-white">
+              {themes}
+            </dd>
+          </div>
+        </dl>
+
         <div className="flex flex-col gap-3">
-          <button
-            onClick={() => setStarted(true)}
-            className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow transition-colors"
-          >
-            Commencer l'examen
+          <button type="button" onClick={() => setDemarre(true)} className="btn btn-danger py-3">
+            Démarrer le chrono
           </button>
-          <button
-            onClick={() => navigate('/')}
-            className="w-full py-2.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
-          >
-            Retour à l'accueil
-          </button>
+          <Link to="/" className="btn btn-secondaire">
+            Retour à l’accueil
+          </Link>
         </div>
       </div>
     );
@@ -56,14 +68,15 @@ export default function ModeExamen() {
 
   return (
     <QuizEngine
-      key={examKey}
+      key={tirage}
       questions={questions}
-      onRestart={() => {
-        setExamKey((k) => k + 1);
-        setStarted(false);
+      titre="Examen blanc"
+      dureeSecondes={DUREE_SECONDES}
+      retour={{ to: '/', libelle: 'Retour à l’accueil' }}
+      onRejouer={() => {
+        setTirage((n) => n + 1);
+        setDemarre(false);
       }}
-      durationSeconds={EXAM_DURATION_SECONDS}
-      examMode
     />
   );
 }

@@ -1,58 +1,51 @@
 import { useState } from 'react';
-import type { QuestionCompleterCode as CCType } from '../../types/quiz';
+import type { QuestionCompleterCode as TypeCC } from '../../types/quiz';
+import { MARQUEUR, analyserTrous } from './trous';
 
 interface Props {
-  question: CCType;
-  submittedAnswer?: string[];
-  onAnswer: (answer: string[]) => void;
+  question: TypeCC;
+  reponseValidee?: string[];
+  onRepondre: (reponse: string[]) => void;
 }
 
-export default function QuestionCompleterCode({
-  question,
-  submittedAnswer,
-  onAnswer,
-}: Props) {
-  const parts = question.codeAvecTrous.split(/(___\d+___)/g);
-  const blankCount = parts.filter((p) => /^___\d+___$/.test(p)).length;
+export default function QuestionCompleterCode({ question, reponseValidee, onRepondre }: Props) {
+  const { parts, positionParNumero, nbTrous } = analyserTrous(question.codeAvecTrous);
 
-  const [userAnswers, setUserAnswers] = useState<string[]>(Array(blankCount).fill(''));
-  const inCorrection = submittedAnswer !== undefined;
-  const current = inCorrection ? submittedAnswer : userAnswers;
-  const allFilled = current.every((a) => a !== '');
+  const [saisies, setSaisies] = useState<string[]>(() => Array(nbTrous).fill(''));
+  const enCorrection = reponseValidee !== undefined;
+  const courant = enCorrection ? reponseValidee : saisies;
+  const toutRempli = courant.length === nbTrous && courant.every((v) => v !== '');
 
-  const update = (idx: number, value: string) =>
-    setUserAnswers((prev) => {
-      const next = [...prev];
-      next[idx] = value;
-      return next;
+  const modifier = (position: number, valeur: string) =>
+    setSaisies((prec) => {
+      const suivant = [...prec];
+      suivant[position] = valeur;
+      return suivant;
     });
 
   return (
     <div>
-      <pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 rounded-lg p-4 text-sm font-mono leading-relaxed overflow-x-auto mb-3 whitespace-pre-wrap">
+      <pre className="mb-4 overflow-x-auto rounded-xl border border-ardoise-800 bg-ardoise-900 p-4 font-mono text-[13px] leading-[2] whitespace-pre-wrap text-ardoise-100 dark:bg-black/40">
         {parts.map((part, i) => {
-          const match = part.match(/^___(\d+)___$/);
-          if (!match) return <span key={i}>{part}</span>;
+          const marqueur = MARQUEUR.exec(part);
+          if (!marqueur) return <span key={i}>{part}</span>;
 
-          const blankIdx = parseInt(match[1]) - 1;
-          const value = current[blankIdx] ?? '';
-          const correct = inCorrection && value === question.bonnesReponses[blankIdx];
-          const wrong = inCorrection && value !== question.bonnesReponses[blankIdx];
+          const position = positionParNumero.get(Number(marqueur[1]))!;
+          const valeur = courant[position] ?? '';
+          const juste = enCorrection && valeur === question.bonnesReponses[position];
 
-          if (inCorrection) {
+          if (enCorrection) {
             return (
               <span
                 key={i}
-                className={`inline-block px-2 py-0.5 rounded font-bold ${
-                  correct
-                    ? 'bg-green-600 text-white'
-                    : 'bg-red-600 text-white'
+                className={`inline-flex items-baseline gap-1.5 rounded-md px-2 py-0.5 font-bold ${
+                  juste ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
                 }`}
               >
-                {value || '???'}
-                {wrong && (
-                  <span className="ml-1.5 text-green-300 font-normal text-xs">
-                    ✓ {question.bonnesReponses[blankIdx]}
+                {valeur || '???'}
+                {!juste && (
+                  <span className="text-xs font-normal text-emerald-200">
+                    → {question.bonnesReponses[position]}
                   </span>
                 )}
               </span>
@@ -62,9 +55,10 @@ export default function QuestionCompleterCode({
           return (
             <select
               key={i}
-              value={value}
-              onChange={(e) => update(blankIdx, e.target.value)}
-              className="inline-block bg-gray-700 hover:bg-gray-600 text-white rounded px-1 font-mono text-sm border border-gray-500 cursor-pointer"
+              value={valeur}
+              aria-label={`Trou numéro ${position + 1}`}
+              onChange={(e) => modifier(position, e.target.value)}
+              className="mx-0.5 inline-block cursor-pointer rounded-md border border-ardoise-600 bg-ardoise-800 px-1.5 py-0.5 font-mono text-[13px] text-white transition-colors hover:border-encre-400 hover:bg-ardoise-700"
             >
               <option value="">???</option>
               {question.choix.map((c) => (
@@ -77,11 +71,12 @@ export default function QuestionCompleterCode({
         })}
       </pre>
 
-      {!inCorrection && (
+      {!enCorrection && (
         <button
-          onClick={() => onAnswer([...userAnswers])}
-          disabled={!allFilled}
-          className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors text-sm"
+          type="button"
+          onClick={() => onRepondre([...saisies])}
+          disabled={!toutRempli}
+          className="btn btn-principal w-full"
         >
           Valider
         </button>

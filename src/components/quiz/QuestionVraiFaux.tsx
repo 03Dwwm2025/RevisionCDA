@@ -1,48 +1,49 @@
-import type { QuestionVraiFaux as VFType } from '../../types/quiz';
+import type { QuestionVraiFaux as TypeVF } from '../../types/quiz';
+import Icone from '../Icone';
 
 interface Props {
-  question: VFType;
-  submittedAnswer?: boolean;
-  onAnswer: (answer: boolean) => void;
+  question: TypeVF;
+  reponseValidee?: boolean;
+  onRepondre: (reponse: boolean) => void;
 }
 
-export default function QuestionVraiFaux({ question, submittedAnswer, onAnswer }: Props) {
-  const inCorrection = submittedAnswer !== undefined;
-
-  const btnCls = (value: boolean) => {
-    const isSelected = submittedAnswer === value;
-    const isCorrect = value === question.bonneReponse;
-    let cls =
-      'flex-1 py-4 rounded-xl border-2 font-bold text-lg transition-colors ';
-
-    if (!inCorrection) {
-      cls +=
-        'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer';
-    } else if (isCorrect) {
-      cls +=
-        'border-green-400 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300';
-    } else if (isSelected) {
-      cls +=
-        'border-red-400 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400';
-    } else {
-      cls +=
-        'border-gray-100 dark:border-gray-800 text-gray-300 dark:text-gray-600';
-    }
-    return cls;
-  };
+export default function QuestionVraiFaux({ question, reponseValidee, onRepondre }: Props) {
+  const enCorrection = reponseValidee !== undefined;
 
   return (
-    <div className="flex gap-4">
-      {[true, false].map((value) => (
-        <button
-          key={String(value)}
-          onClick={() => !inCorrection && onAnswer(value)}
-          disabled={inCorrection}
-          className={btnCls(value)}
-        >
-          {value ? '✓ Vrai' : '✗ Faux'}
-        </button>
-      ))}
+    <div className="grid grid-cols-2 gap-3">
+      {[true, false].map((valeur) => {
+        const estBonne = valeur === question.bonneReponse;
+        const estChoisie = reponseValidee === valeur;
+
+        let styles =
+          'border-ardoise-200 hover:border-encre-400 hover:bg-encre-50 dark:border-ardoise-700 dark:hover:border-encre-500 dark:hover:bg-encre-500/10';
+        if (enCorrection) {
+          if (estBonne)
+            styles = 'border-emerald-400 bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-500/10';
+          else if (estChoisie)
+            styles = 'border-rose-400 bg-rose-50 dark:border-rose-600 dark:bg-rose-500/10';
+          else styles = 'border-ardoise-200 opacity-50 dark:border-ardoise-800';
+        }
+
+        return (
+          <button
+            key={String(valeur)}
+            type="button"
+            disabled={enCorrection}
+            onClick={() => onRepondre(valeur)}
+            className={`flex items-center justify-center gap-2 rounded-xl border py-4 text-base font-semibold text-ardoise-800 transition-all disabled:cursor-default dark:text-ardoise-200 ${styles}`}
+          >
+            {enCorrection && (estBonne || estChoisie) && (
+              <Icone
+                nom={estBonne ? 'coche' : 'croix'}
+                className={`h-5 w-5 ${estBonne ? 'text-emerald-600' : 'text-rose-600'}`}
+              />
+            )}
+            {valeur ? 'Vrai' : 'Faux'}
+          </button>
+        );
+      })}
     </div>
   );
 }

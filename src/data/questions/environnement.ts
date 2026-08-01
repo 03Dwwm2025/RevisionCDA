@@ -6,41 +6,42 @@ export const questionsEnvironnement: Question[] = [
     theme: 'environnement',
     type: 'qcm',
     difficulte: 2,
-    enonce: 'En intégration continue, pourquoi utilise-t-on `npm ci` plutôt que `npm install` ?',
+    enonce:
+      'En intégration continue, pourquoi installer les dépendances à partir du fichier de verrouillage plutôt qu’en résolvant les versions à chaque exécution ?',
     options: [
-      'Parce que `ci` installe exactement ce que décrit le fichier de verrouillage, ce qui rend le build reproductible',
-      'Parce que `ci` est plus rapide à taper',
-      'Parce que `install` ne fonctionne pas sur un serveur Linux',
-      'Parce que `ci` met automatiquement les dépendances à jour',
+      'Pour que le build soit reproductible : deux exécutions installent exactement le même arbre de dépendances',
+      'Parce que c’est plus rapide à taper dans le fichier de pipeline',
+      'Parce que la résolution de versions ne fonctionne pas sur un serveur',
+      'Parce que cela met automatiquement les dépendances à jour',
     ],
     bonneReponse: 0,
     explication:
-      '`npm install` peut faire évoluer des versions dans les limites autorisées par package.json et réécrire le verrou. `npm ci` supprime node_modules et réinstalle à l’identique le contenu de package-lock.json, en échouant si les deux fichiers divergent. En CI on veut un build identique à chaque exécution, pas un build qui change tout seul.',
+      'Résoudre les versions à chaque fois autorise une dépendance transitive à évoluer entre deux exécutions : le build peut casser sans qu’une seule ligne du projet ait changé. Chaque écosystème a sa commande d’installation stricte — `npm ci`, `composer install`, `pip install -r` avec versions figées, restauration verrouillée en .NET.',
   },
   {
     id: 'env-002',
     theme: 'environnement',
     type: 'association',
     difficulte: 2,
-    enonce: 'Associez chaque notation de version npm à ce qu’elle autorise.',
+    enonce: 'Associez chaque façon de déclarer une dépendance au risque qu’elle fait courir.',
     paires: [
-      { gauche: '1.4.2', droite: 'Exactement cette version, rien d’autre' },
-      { gauche: '~1.4.2', droite: 'Les correctifs uniquement : 1.4.x' },
-      { gauche: '^1.4.2', droite: 'Les versions mineures et correctifs : 1.x.x' },
-      { gauche: '*', droite: 'N’importe quelle version, y compris majeure' },
+      { gauche: 'Version exacte figée', droite: 'Aucun risque de surprise, mais aucun correctif de sécurité automatique' },
+      { gauche: 'Correctifs autorisés seulement', droite: 'Risque faible : seules les corrections entrent' },
+      { gauche: 'Versions mineures autorisées', droite: 'Risque modéré : une bibliothèque mal versionnée peut casser' },
+      { gauche: 'Aucune limite de version', droite: 'Risque élevé : une version majeure incompatible peut entrer seule' },
     ],
     explication:
-      'Le tilde n’autorise que le dernier nombre à bouger (correctifs), le circonflexe autorise aussi les mineures. Ces plages reposent sur la discipline SemVer des mainteneurs : c’est pour ça que le fichier de verrouillage reste indispensable, il fige l’arbre réellement installé.',
+      'Ces plages reposent entièrement sur la discipline SemVer des mainteneurs : rien n’empêche techniquement une version mineure d’introduire une rupture. C’est pour ça que le fichier de verrouillage reste indispensable — il fige l’arbre réellement installé, quelle que soit la plage déclarée. Les notations varient (`~` et `^` chez npm et Composer, crochets chez NuGet, `~=` chez pip).',
   },
   {
     id: 'env-003',
     theme: 'environnement',
     type: 'vrai_faux',
     difficulte: 1,
-    enonce: 'Le fichier `package-lock.json` doit être versionné dans Git.',
+    enonce: 'Le fichier de verrouillage des dépendances doit être versionné dans Git.',
     bonneReponse: true,
     explication:
-      'C’est lui qui garantit que la machine du développeur, celle du collègue, la CI et le serveur installent exactement le même arbre de dépendances, aux versions transitives près. L’ignorer réintroduit la classe entière des bugs « ça marchait chez moi ».',
+      'C’est lui qui garantit que la machine du développeur, celle du collègue, la CI et le serveur installent le même arbre, jusqu’aux dépendances transitives. L’ignorer réintroduit la classe entière des bugs « ça marchait chez moi ». Il porte un nom différent partout — `package-lock.json`, `composer.lock`, `poetry.lock`, `Gemfile.lock`, `packages.lock.json` — mais le rôle est identique.',
   },
   {
     id: 'env-004',
@@ -135,20 +136,27 @@ export const questionsEnvironnement: Question[] = [
     theme: 'environnement',
     type: 'completer_code',
     difficulte: 2,
-    enonce: 'Complétez ce `.gitignore` pour un projet Node.js afin d’exclure les dépendances, le build et les secrets.',
-    codeAvecTrous: `# Dépendances
+    enonce: 'Complétez ce `.gitignore` en choisissant, pour chaque catégorie, ce qui ne doit pas être versionné.',
+    codeAvecTrous: `# Dépendances installées (elles se réinstallent)
 ___1___
 
-# Build de production
+# Résultat de compilation (il se reconstruit)
 ___2___
 
 # Secrets et configuration locale
 ___3___
 *.local`,
-    choix: ['node_modules', 'dist', '.env', 'package-lock.json', 'src', 'README.md'],
-    bonnesReponses: ['node_modules', 'dist', '.env'],
+    choix: [
+      'node_modules/ vendor/ packages/',
+      'dist/ build/ bin/ obj/',
+      '.env',
+      'le fichier de verrouillage',
+      'le code source',
+      'la documentation',
+    ],
+    bonnesReponses: ['node_modules/ vendor/ packages/', 'dist/ build/ bin/ obj/', '.env'],
     explication:
-      '`node_modules` se reconstruit avec `npm ci`, `dist` se reconstruit avec `npm run build`, et le `.env` contient des secrets. En revanche `package-lock.json` DOIT être versionné : c’est lui qui rend l’installation reproductible.',
+      'Le critère est simple : tout ce qui se régénère, ou qui contient un secret, reste hors du dépôt. Attention au piège inverse — le fichier de verrouillage, lui, DOIT être versionné : il se régénère, mais pas à l’identique, et c’est justement ce qui garantit la reproductibilité.',
   },
   {
     id: 'env-011',

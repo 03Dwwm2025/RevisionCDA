@@ -103,10 +103,11 @@ export const questionsMiseEnProd: Question[] = [
     theme: 'mise-en-prod',
     type: 'vrai_faux',
     difficulte: 2,
-    enonce: 'Les modes debug et les messages d\'erreur détaillés (stack trace) doivent être désactivés en production.',
+    enonce:
+      'Le mode de débogage et les messages d’erreur détaillés doivent être désactivés en production.',
     bonneReponse: true,
     explication:
-      'Une stack trace expose la structure interne du code (chemins de fichiers, versions de librairies, requêtes SQL…) à n\'importe qui. En ASP.NET Core : `app.UseExceptionHandler("/error")` en prod au lieu de `app.UseDeveloperExceptionPage()`. En React/Vite : le build de prod minifie et ne contient pas les sources.',
+      'Une trace d’exécution expose la structure interne du projet à n’importe quel visiteur : chemins de fichiers, versions de bibliothèques, parfois la requête SQL fautive. En production on renvoie un message générique avec un identifiant de corrélation, et le détail reste dans les journaux serveur. Côté front, le build de production supprime aussi les cartes de source.',
   },
   {
     id: 'prod-008',

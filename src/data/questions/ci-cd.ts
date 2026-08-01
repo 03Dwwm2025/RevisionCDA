@@ -16,17 +16,17 @@ export const questionsCiCd: Question[] = [
     theme: 'ci-cd',
     type: 'remettre_ordre',
     difficulte: 1,
-    enonce: 'Remettez dans l\'ordre les étapes d\'un pipeline CI/CD typique (GitHub Actions).',
+    enonce: 'Remettez dans l’ordre les étapes d’un pipeline d’intégration et de déploiement continus.',
     elements: [
-      'Déclenchement sur push vers main',
-      'Checkout du code source',
-      'Installation des dépendances (`npm ci` ou `dotnet restore`)',
+      'Déclenchement sur une modification de la branche principale',
+      'Récupération du code source sur la machine d’exécution',
+      'Installation des dépendances à partir du fichier de verrouillage',
       'Exécution des tests automatisés',
-      'Build de l\'image Docker et push vers le registry',
-      'Déploiement sur le VPS via SSH',
+      'Construction de l’image et publication dans le registre',
+      'Déploiement sur le serveur cible',
     ],
     explication:
-      'L\'ordre est crucial : on installe avant de tester, on teste avant de builder l\'image, on construit avant de déployer. Si les tests échouent, le pipeline s\'arrête — le déploiement n\'a pas lieu. Le job `deploy` déclare `needs: build-test` pour exprimer cette dépendance.',
+      'L’ordre porte le sens : on installe avant de tester, on teste avant de construire l’artefact, on construit avant de déployer. Si les tests échouent, la chaîne s’arrête et rien ne part en production. Le lien de dépendance entre les étapes s’exprime explicitement dans le fichier de pipeline.',
   },
   {
     id: 'cicd-003',
@@ -49,28 +49,29 @@ export const questionsCiCd: Question[] = [
     theme: 'ci-cd',
     type: 'completer_code',
     difficulte: 2,
-    enonce: 'Complétez ce workflow GitHub Actions qui teste puis déploie une application.',
+    enonce: 'Complétez ce fichier de pipeline qui teste puis déploie une application.',
     codeAvecTrous: `name: CI/CD
 on:
   push:
     branches: [main]
+
 jobs:
   build-test:
     ___1___: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm ci
-      - run: npm test
+      - run: installation-des-dependances
+      - run: execution-des-tests
+
   deploy:
-    ___2___: build-test
+    ___2___: build-test          # ne démarre que si les tests passent
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH
-        run: ssh deploy@vps 'docker compose ___3___ && docker compose up -d'`,
+      - run: ssh deploy@serveur 'docker compose ___3___ && docker compose up -d'`,
     choix: ['runs-on', 'run', 'uses', 'needs', 'depends-on', 'after', 'pull', 'build', 'restart'],
     bonnesReponses: ['runs-on', 'needs', 'pull'],
     explication:
-      '`runs-on` définit l\'environnement d\'exécution du job. `needs: build-test` bloque le job `deploy` jusqu\'à ce que `build-test` réussisse. `docker compose pull` récupère les nouvelles images depuis le registry avant de relancer les conteneurs.',
+      'La machine d’exécution se déclare par job. Le lien de dépendance entre jobs est ce qui empêche un déploiement quand les tests échouent : sans lui, les deux jobs partiraient en parallèle. Enfin on récupère la nouvelle image du registre avant de relancer les conteneurs, sinon on redémarre l’ancienne version.',
   },
   {
     id: 'cicd-005',

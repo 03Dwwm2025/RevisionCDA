@@ -22,11 +22,11 @@ export const questionsApiRest: Question[] = [
     theme: 'api-rest',
     type: 'qcm',
     difficulte: 1,
-    enonce: 'Quel code HTTP doit retourner une API après la **création réussie** d\'une ressource via POST ?',
-    options: ['200 OK', '201 Created', '204 No Content', '202 Accepted'],
-    bonneReponse: 1,
+    enonce: 'Quel code HTTP renvoyer après la **création réussie** d’une ressource par POST ?',
+    options: ['201 Created', '200 OK', '204 No Content', '202 Accepted'],
+    bonneReponse: 0,
     explication:
-      '201 Created = la ressource a été créée, avec idéalement un header `Location` pointant vers la nouvelle ressource (`CreatedAtAction` en ASP.NET Core). 200 est pour une lecture réussie. 204 = succès sans corps de réponse (souvent DELETE ou PUT). 202 = traitement asynchrone en cours.',
+      '201 Created signale la création, avec idéalement un en-tête `Location` qui pointe vers la nouvelle ressource. 200 convient à une lecture réussie, 204 à un succès sans corps de réponse (souvent DELETE), 202 à un traitement accepté mais pas encore terminé.',
   },
   {
     id: 'api-003',
@@ -48,19 +48,26 @@ export const questionsApiRest: Question[] = [
     theme: 'api-rest',
     type: 'completer_code',
     difficulte: 2,
-    enonce: 'Complétez ce contrôleur ASP.NET Core pour créer une demande (POST) et retourner les bons codes HTTP.',
-    codeAvecTrous: `[HttpPost]
-[___1___]
-public IActionResult Creer([FromBody] DemandeDto dto)
-{
-    if (!ModelState.IsValid) return ___2___(ModelState);
-    var res = _service.Deposer(dto);
-    return ___3___(nameof(Get), new { id = res.Id }, res);
-}`,
-    choix: ['Authorize', 'AllowAnonymous', 'Route', 'BadRequest', 'NotFound', 'Ok', 'CreatedAtAction', 'Created'],
-    bonnesReponses: ['Authorize', 'BadRequest', 'CreatedAtAction'],
+    enonce:
+      'Complétez ces échanges HTTP : création réussie, puis création refusée pour données invalides.',
+    codeAvecTrous: `POST /api/demandes
+Content-Type: application/json
+
+{ "dateDebut": "2026-07-01", "dateFin": "2026-07-15" }
+
+--- Réponse en cas de succès ---
+HTTP/1.1 ___1___ Created
+___2___: /api/demandes/42
+
+--- Réponse si la date de fin précède la date de début ---
+HTTP/1.1 ___3___ Bad Request
+Content-Type: application/json
+
+{ "erreurs": { "dateFin": "doit être postérieure à la date de début" } }`,
+    choix: ['201', '200', '204', 'Location', 'Content-Location', 'Link', '400', '404', '500'],
+    bonnesReponses: ['201', 'Location', '400'],
     explication:
-      '`[Authorize]` exige un utilisateur authentifié. `BadRequest(ModelState)` retourne 400 avec les erreurs de validation. `CreatedAtAction` retourne 201 avec le header `Location` pointant vers la route GET correspondante — la bonne pratique REST.',
+      'L’en-tête `Location` évite au client de deviner l’adresse de la ressource créée. Le 400 désigne une faute du client : la requête est malformée. Un 500 accuserait le serveur à tort et déclencherait des alertes pour rien.',
   },
   {
     id: 'api-005',
@@ -93,42 +100,44 @@ public IActionResult Creer([FromBody] DemandeDto dto)
     theme: 'api-rest',
     type: 'qcm',
     difficulte: 2,
-    enonce: 'Qu\'est-ce que le **CORS** et pourquoi faut-il le configurer strictement ?',
+    enonce: 'Qu’est-ce que le CORS, et pourquoi le configurer strictement ?',
     options: [
-      'Un format d\'encodage des données JSON qui remplace UTF-8',
-      'Un mécanisme du navigateur qui bloque les requêtes cross-origine ; configurer les origines autorisées côté serveur',
+      'Une protection du navigateur qui bloque les appels vers une autre origine ; le serveur déclare les origines qu’il accepte',
+      'Un format d’encodage des données JSON qui remplace UTF-8',
       'Un protocole de chiffrement alternatif à HTTPS',
       'Une politique de cache HTTP pour les API publiques',
     ],
-    bonneReponse: 1,
+    bonneReponse: 0,
     explication:
-      'CORS (Cross-Origin Resource Sharing) : par défaut, un navigateur bloque les requêtes vers un domaine différent. Le serveur API doit déclarer les origines autorisées (`Access-Control-Allow-Origin`). Autoriser `*` en prod = risque XSS + fuite de données. En ASP.NET Core : `builder.Services.AddCors()`.',
+      'Par défaut, un navigateur refuse qu’une page appelle une API sur un autre domaine. Le serveur lève cette restriction avec l’en-tête `Access-Control-Allow-Origin`. Y mettre `*` en production autorise n’importe quel site à appeler l’API depuis le navigateur d’un utilisateur connecté : on liste les origines réellement nécessaires.',
   },
   {
     id: 'api-008',
     theme: 'api-rest',
     type: 'remettre_ordre',
     difficulte: 2,
-    enonce: 'Remettez dans l\'ordre le cycle d\'une requête HTTP dans une architecture en couches (ASP.NET Core).',
+    enonce:
+      'Remettez dans l’ordre le trajet d’une requête de création dans une architecture en couches.',
     elements: [
-      'Le client envoie la requête HTTP (ex. POST /api/demandes)',
-      'Le Controller reçoit la requête, valide les données (`ModelState`)',
-      'Le Service (métier) applique les règles et appelle le Repository',
-      'Le Repository exécute la requête SQL paramétrée en base',
-      'La réponse remonte : Controller retourne 201 avec la ressource créée',
+      'Le client envoie la requête HTTP',
+      'La couche de présentation valide le format des données reçues',
+      'La couche métier applique les règles de gestion',
+      'La couche d’accès aux données exécute la requête paramétrée',
+      'La réponse remonte les couches et le client reçoit un 201',
     ],
     explication:
-      'View/Client → Controller (validation) → Service (logique métier) → Repository (données) → BDD, puis retour inverse. Le Controller ne fait jamais de SQL directement, le Repository ne contient jamais de règles métier.',
+      'Les dépendances vont dans un seul sens. La couche de présentation ne parle jamais directement à la base, et la couche d’accès aux données ne porte aucune règle de gestion. C’est ce cloisonnement qui permet de tester le métier sans base de données.',
   },
   {
     id: 'api-009',
     theme: 'api-rest',
     type: 'vrai_faux',
     difficulte: 2,
-    enonce: 'La validation des entrées côté serveur est **obligatoire** même si le front-end valide déjà les données avant envoi.',
+    enonce:
+      'La validation des entrées côté serveur reste obligatoire même si le front-end valide déjà avant l’envoi.',
     bonneReponse: true,
     explication:
-      'La validation client est du confort (UX). Elle peut être contournée facilement (Postman, curl, DevTools). Seule la validation serveur est de la sécurité. En ASP.NET Core : Data Annotations + `ModelState.IsValid`, ou FluentValidation.',
+      'La validation côté client améliore le confort d’usage, elle ne protège rien : un client HTTP en ligne de commande contourne l’interface et parle directement à l’API. Seule la validation serveur constitue une défense. On garde les deux, pour des raisons différentes.',
   },
   {
     id: 'api-010',
@@ -168,16 +177,16 @@ public IActionResult Creer([FromBody] DemandeDto dto)
     theme: 'api-rest',
     type: 'qcm',
     difficulte: 2,
-    enonce: 'Pourquoi borner le paramètre `taille` d’une pagination côté serveur ?',
+    enonce: 'Pourquoi borner côté serveur le paramètre de taille d’une pagination ?',
     options: [
-      'Parce qu’un client peut demander `taille=1000000` et provoquer une saturation du serveur',
+      'Parce qu’un client peut demander une page de un million d’éléments et saturer le serveur',
       'Parce que les navigateurs limitent la longueur des URL',
       'Parce que le protocole HTTP interdit les nombres au-delà de 1000',
-      'Parce que la base de données refuse les LIMIT trop grands',
+      'Parce que les bases de données refusent les limites trop grandes',
     ],
     bonneReponse: 0,
     explication:
-      'Tout paramètre venu du client est une entrée à valider. Un `Math.Clamp(taille, 1, 100)` transforme une requête abusive en requête normale. C’est la même logique que la validation d’un formulaire, appliquée aux paramètres de requête.',
+      'Tout paramètre venu du client est une entrée à valider, y compris dans la chaîne de requête. On ramène la valeur dans un intervalle raisonnable — au moins 1, au plus 100 par exemple — plutôt que de faire confiance. C’est la validation de formulaire, appliquée à l’URL.',
   },
   {
     id: 'api-013',
@@ -302,18 +311,22 @@ public IActionResult Creer([FromBody] DemandeDto dto)
     theme: 'api-rest',
     type: 'completer_code',
     difficulte: 2,
-    enonce: 'Complétez cette action paginée : borner la taille et renvoyer les métadonnées de pagination.',
-    codeAvecTrous: `[HttpGet]
-public IActionResult Lister([___1___] int page = 1, [___1___] int taille = 20)
-{
-    taille = Math.___2___(taille, 1, 100);
-    var (items, total) = _service.Lister(page, taille);
+    enonce:
+      'Complétez cette réponse d’API paginée, pour que le client puisse naviguer sans deviner.',
+    codeAvecTrous: `GET /api/demandes?page=2&taille=20&statut=EN_ATTENTE
 
-    return ___3___(new { donnees = items, page, taille, total });
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "donnees": [ ... ],
+  "___1___": 2,
+  "___2___": 20,
+  "___3___": 137
 }`,
-    choix: ['FromQuery', 'FromBody', 'FromRoute', 'Clamp', 'Max', 'Ok', 'Created', 'NoContent'],
-    bonnesReponses: ['FromQuery', 'Clamp', 'Ok'],
+    choix: ['page', 'taille', 'total', 'statut', 'tri', 'donnees'],
+    bonnesReponses: ['page', 'taille', 'total'],
     explication:
-      '`[FromQuery]` lie les paramètres de la chaîne de requête (?page=2&taille=20). `Math.Clamp` borne la valeur dans un intervalle. `Ok()` renvoie 200 avec le corps. Renvoyer le total permet au client de calculer le nombre de pages sans deviner.',
+      'Rappeler la page et la taille demandées évite au client de tenir un état de son côté ; le total lui permet de calculer le nombre de pages et d’afficher une pagination correcte. Certaines API transportent ces informations dans des en-têtes plutôt que dans le corps : les deux se défendent, l’essentiel est de rester cohérent.',
   },
 ];

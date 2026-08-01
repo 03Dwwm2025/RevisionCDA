@@ -65,16 +65,16 @@ export const questionsDocker: Question[] = [
     type: 'qcm',
     difficulte: 2,
     enonce:
-      'Pourquoi copie-t-on `package.json` et installe-t-on les dépendances AVANT de copier tout le code source dans un Dockerfile ?',
+      'Pourquoi copier le fichier de dépendances et les installer AVANT de copier tout le code source dans un Dockerfile ?',
     options: [
-      'Pour que les dépendances soient disponibles plus tôt dans le build',
-      'Pour exploiter le cache des layers : si `package.json` n\'a pas changé, Docker réutilise la couche des dépendances',
-      'C\'est une obligation syntaxique de Docker',
-      'Pour réduire la taille de l\'image finale',
+      'Pour exploiter le cache des couches : si les dépendances n’ont pas changé, Docker réutilise la couche existante',
+      'Pour que les dépendances soient disponibles plus tôt pendant la construction',
+      'Parce que Docker impose cet ordre',
+      'Pour réduire la taille de l’image finale',
     ],
-    bonneReponse: 1,
+    bonneReponse: 0,
     explication:
-      'Chaque instruction crée une couche mise en cache. Si on copie tout avec `COPY . .` d\'abord, le moindre changement de code invalide aussi la couche `npm ci`. En isolant `package.json`, la réinstallation des dépendances n\'arrive que si elles changent vraiment.',
+      'Chaque instruction crée une couche mise en cache. En copiant tout d’abord, le moindre changement de code invalide aussi l’installation des dépendances, qui est l’étape la plus longue. En isolant le fichier de dépendances — `package.json`, `.csproj`, `requirements.txt`, `composer.json` — la réinstallation n’a lieu que lorsqu’elles changent vraiment.',
   },
   {
     id: 'docker-011',
@@ -111,40 +111,37 @@ export const questionsDocker: Question[] = [
     theme: 'docker',
     type: 'completer_code',
     difficulte: 2,
-    enonce:
-      'Complétez ce Dockerfile multi-stage (app React/Vite → Nginx).',
-    codeAvecTrous: `# Stage 1 : build
-FROM node:20-alpine ___1___ builder
+    enonce: 'Complétez ce Dockerfile en deux étapes : on compile d’un côté, on ne garde que le résultat de l’autre.',
+    codeAvecTrous: `# Étape 1 : compilation, dans une image qui contient les outils de build
+FROM image-de-build ___1___ compilateur
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run ___2___
+COPY .                              # le code source
+RUN commande-de-compilation         # produit le dossier /app/dist
 
-# Stage 2 : production
+# Étape 2 : image finale, sans aucun outil de compilation
 FROM nginx:alpine
-COPY ___3___ /app/dist /usr/share/nginx/html
-EXPOSE 80`,
-    choix: ['AS', 'IS', 'NAMED', 'build', 'start', 'test', '--from=builder', '--copy=builder', '--from=./dist'],
-    bonnesReponses: ['AS', 'build', '--from=builder'],
+COPY ___2___ /app/dist /usr/share/nginx/html
+___3___ 80`,
+    choix: ['AS', 'IS', 'NAMED', '--from=compilateur', '--copy=compilateur', '--stage=1', 'EXPOSE', 'PORT', 'OPEN'],
+    bonnesReponses: ['AS', '--from=compilateur', 'EXPOSE'],
     explication:
-      '`AS builder` nomme le stage pour pouvoir le référencer. `npm run build` génère le dossier `dist`. `--from=builder` dans le second stage récupère uniquement les artefacts compilés, sans Node ni dépendances de dev.',
+      'Nommer l’étape permet d’y puiser ensuite. Le `--from` récupère uniquement les fichiers compilés : ni compilateur, ni dépendances de développement, ni code source dans l’image livrée. `EXPOSE` documente le port écouté — il ne l’ouvre pas, c’est la publication au démarrage qui le fait.',
   },
   {
     id: 'docker-008',
     theme: 'docker',
     type: 'remettre_ordre',
     difficulte: 1,
-    enonce: 'Remettez dans l\'ordre les instructions d\'un Dockerfile multi-stage type.',
+    enonce: 'Remettez dans l’ordre les instructions d’un Dockerfile en deux étapes.',
     elements: [
-      'FROM node:20 AS builder',
-      'RUN npm ci',
-      'RUN npm run build',
-      'FROM nginx:alpine',
-      'COPY --from=builder /app/dist /usr/share/nginx/html',
+      'Partir d’une image contenant les outils de compilation, et la nommer',
+      'Installer les dépendances déclarées par le projet',
+      'Compiler l’application',
+      'Repartir d’une image finale légère',
+      'Copier depuis l’étape de compilation le seul résultat compilé',
     ],
     explication:
-      'Le stage builder : image Node → install deps → build. Le stage final : image Nginx légère → copier uniquement le dist. Résultat : image de prod sans Node, sans node_modules.',
+      'La première étape a besoin de tout : compilateur, dépendances de développement, code source. La seconde ne garde que le produit fini. On passe couramment de plusieurs centaines de méga-octets à quelques dizaines, et la surface d’attaque diminue d’autant.',
   },
 
   // --- Sécurité (15.2 / 15.3) ---
@@ -153,16 +150,16 @@ EXPOSE 80`,
     theme: 'docker',
     type: 'qcm',
     difficulte: 2,
-    enonce: 'Parmi ces pratiques, laquelle est recommandée pour sécuriser un conteneur Docker de production ?',
+    enonce: 'Quelle pratique sécurise réellement une image de production ?',
     options: [
-      'Utiliser `FROM ubuntu:latest` pour toujours avoir les derniers patchs',
-      'Ajouter `USER node` (ou un user dédié) avant le `CMD` pour ne pas tourner en root',
-      'Copier le fichier `.env` dans l\'image pour que l\'app puisse le lire',
-      'Utiliser `RUN npm install` plutôt que `npm ci` pour plus de flexibilité',
+      'Basculer sur un utilisateur dédié avant la commande de démarrage, pour ne pas tourner en root',
+      'Utiliser une image de base marquée `latest` pour avoir toujours les derniers correctifs',
+      'Copier le fichier de secrets dans l’image pour que l’application puisse le lire',
+      'Laisser le gestionnaire de paquets résoudre librement les versions, pour plus de souplesse',
     ],
-    bonneReponse: 1,
+    bonneReponse: 0,
     explication:
-      'Tourner en root dans un conteneur est risqué : en cas de compromission, l\'attaquant a les pleins pouvoirs. `USER node` avant `CMD` est une bonne pratique de base. `:latest` est non déterministe, `.env` ne doit jamais être dans l\'image, `npm ci` est plus sûr que `npm install` (lockfile strict).',
+      'Tourner en root dans un conteneur donne les pleins pouvoirs à qui le compromet. Le tag `latest` est une cible mouvante : impossible de savoir ce qui tourne, ni de revenir en arrière. Un secret copié dans une couche reste récupérable avec `docker history`, même supprimé ensuite.',
   },
 
   // --- COPY vs ADD, réseaux, debug ---
@@ -213,27 +210,28 @@ EXPOSE 80`,
     theme: 'docker',
     type: 'completer_code',
     difficulte: 3,
-    enonce: 'Complétez ce Dockerfile Node.js sécurisé : dépendances en cache, non-root, port documenté.',
-    codeAvecTrous: `FROM node:20-alpine
+    enonce:
+      'Complétez ce Dockerfile : dépendances mises en cache, exécution sans root, commande de démarrage.',
+    codeAvecTrous: `FROM image-de-base
 WORKDIR /app
 
-# Installer les dépendances AVANT le code source (cache layer)
-COPY package*.json ./
-RUN ___1___
+# Le fichier de dépendances d'abord : il change rarement
+COPY fichier-de-dependances ./
+RUN installation-des-dependances
 
-# Copier le code source
-COPY . .
-RUN npm run build
+# Le code source ensuite : il change à chaque commit
+___1___ . .
+RUN commande-de-compilation
 
-# Exécuter en non-root
-___2___ node
+# Ne pas tourner en root
+___2___ appli
 
 EXPOSE 3000
-___3___ ["node", "dist/index.js"]`,
-    choix: ['npm ci', 'npm install', 'npm update', 'USER', 'RUN useradd', 'GROUP', 'CMD', 'ENTRYPOINT', 'RUN'],
-    bonnesReponses: ['npm ci', 'USER', 'CMD'],
+___3___ ["./demarrer"]`,
+    choix: ['COPY', 'ADD', 'MOVE', 'USER', 'GROUP', 'SUDO', 'CMD', 'RUN', 'START'],
+    bonnesReponses: ['COPY', 'USER', 'CMD'],
     explication:
-      '`npm ci` installe exactement ce qui est dans `package-lock.json` (déterministe, plus sûr que `npm install`). `USER node` bascule vers l\'utilisateur non-root intégré à l\'image `node:alpine`. `CMD` définit la commande de démarrage (peut être surchargée, contrairement à `ENTRYPOINT`).',
+      '`COPY` est préféré à `ADD`, au comportement moins prévisible. `USER` bascule sur un compte sans privilèges avant le démarrage. `CMD` donne la commande par défaut, surchargeable au lancement — contrairement à `ENTRYPOINT`, plus rigide. L’ordre dépendances puis code est ce qui rend le cache efficace.',
   },
 
   // --- Docker Compose (15.3) ---
@@ -362,14 +360,14 @@ ___3___:
     difficulte: 2,
     enonce: 'À quoi sert un fichier `.dockerignore` ?',
     options: [
-      'À exclure des fichiers du contexte de build : `node_modules`, `.git`, `.env`',
+      'À exclure du contexte de build les dépendances installées, l’historique Git et les fichiers de secrets',
       'À indiquer les conteneurs à ne pas démarrer',
       'À ignorer les erreurs pendant la construction de l’image',
-      'À exclure des couches du cache Docker',
+      'À exclure certaines couches du cache',
     ],
     bonneReponse: 0,
     explication:
-      'Sans lui, un `COPY . .` embarque tout : build plus lent, image plus lourde, et surtout des secrets copiés dans une couche de l’image, récupérables avec `docker history`. Même rôle et même syntaxe que le `.gitignore`, mais pour le contexte de build.',
+      'Sans lui, un `COPY . .` embarque tout : construction plus lente, image plus lourde, et surtout des secrets copiés dans une couche, récupérables avec `docker history` même s’ils sont effacés ensuite. Même rôle et même syntaxe que le `.gitignore`, appliqué au contexte de build.',
   },
   {
     id: 'docker-023',
@@ -386,15 +384,16 @@ ___3___:
     theme: 'docker',
     type: 'qcm',
     difficulte: 2,
-    enonce: 'Pourquoi copier `package*.json` puis lancer `npm ci` AVANT de copier le reste du code dans un Dockerfile ?',
+    enonce:
+      'Pourquoi copier le fichier de dépendances et les installer avant de copier le reste du code source ?',
     options: [
       'Pour profiter du cache de couches : l’installation n’est refaite que si les dépendances changent',
-      'Parce que npm refuse de s’exécuter si le code source est présent',
+      'Parce que l’installation échoue si le code source est déjà présent',
       'Pour réduire la taille finale de l’image',
-      'Parce que l’ordre des instructions est imposé par Docker',
+      'Parce que Docker impose cet ordre d’instructions',
     ],
     bonneReponse: 0,
     explication:
-      'Chaque instruction crée une couche mise en cache. Le code source change à chaque commit, les dépendances rarement : en les installant d’abord, on évite de retélécharger tout l’arbre npm à chaque build. C’est le gain le plus rentable sur un Dockerfile.',
+      'Chaque instruction crée une couche mise en cache, et une couche invalidée invalide toutes les suivantes. Le code source change à chaque commit, les dépendances rarement : les installer d’abord évite de retélécharger tout l’arbre à chaque construction. C’est le réglage le plus rentable d’un Dockerfile.',
   },
 ];

@@ -9,13 +9,13 @@ export const questionsSOLID: Question[] = [
     difficulte: 1,
     enonce: 'Associez chaque lettre de SOLID au principe correspondant.',
     paires: [
-      { gauche: 'S — Single Responsibility', droite: 'Une classe = une seule raison de changer' },
-      { gauche: 'O — Open/Closed', droite: 'Ouvert à l\'extension, fermé à la modification' },
+      { gauche: 'S — Single Responsibility', droite: 'Une classe, une seule raison de changer' },
+      { gauche: 'O — Open/Closed', droite: 'Ouvert à l’extension, fermé à la modification' },
       { gauche: 'L — Liskov Substitution', droite: 'Une classe enfant doit pouvoir remplacer son parent sans rien casser' },
-      { gauche: 'D — Dependency Inversion', droite: 'Dépendre d\'abstractions (interfaces), pas d\'implémentations concrètes' },
+      { gauche: 'D — Dependency Inversion', droite: 'Dépendre d’abstractions, pas d’implémentations concrètes' },
     ],
     explication:
-      'Astuce : S=Une responsabilité, O=Étendre sans modifier, L=Substitution parent/enfant, I=Interfaces spécifiques, D=Dépendre d\'abstractions. Le D est au cœur de l\'injection de dépendances en ASP.NET Core.',
+      'Moyen mnémotechnique : une responsabilité, étendre sans modifier, substitution parent-enfant, interfaces spécifiques, dépendre d’abstractions. Le D est le principe derrière l’injection de dépendances, quel que soit le langage.',
   },
   {
     id: 'solid-002',
@@ -80,24 +80,34 @@ export const questionsSOLID: Question[] = [
     theme: 'solid',
     type: 'completer_code',
     difficulte: 2,
-    enonce: 'Complétez ce code ASP.NET Core qui applique la **Dependency Inversion** via l\'injection de dépendances.',
-    codeAvecTrous: `// Interface (abstraction)
-public ___1___ IServiceConges
-{
-    Resultat Deposer(int idSalarie, DateOnly debut, DateOnly fin);
-}
+    enonce:
+      'Complétez ce pseudo-code qui applique l’inversion des dépendances : la couche métier ne connaît qu’un contrat.',
+    codeAvecTrous: `___1___ IDepotDemande :
+    enregistrer(demande)
+    listerParSalarie(idSalarie)
 
-// Implémentation concrète
-public class ServiceConges : ___2___
-{
-    private readonly IDemandeRepository _repo;
-    public ServiceConges(___3___ repo) => _repo = repo;
-    public Resultat Deposer(int id, DateOnly d, DateOnly f) { /* ... */ return Resultat.Ok(); }
-}`,
-    choix: ['interface', 'class', 'abstract', 'IServiceConges', 'ServiceConges', 'IDemandeRepository', 'DemandeRepository'],
-    bonnesReponses: ['interface', 'IServiceConges', 'IDemandeRepository'],
+classe ServiceConges :
+    depot : ___2___          # on déclare le contrat, pas la classe concrète
+
+    constructeur(depot) :    # la dépendance est reçue, pas créée
+        ceci.depot = depot
+
+# En production
+service = nouveau ServiceConges(nouveau ___3___())
+# En test
+service = nouveau ServiceConges(nouveau DepotEnMemoire())`,
+    choix: [
+      'contrat',
+      'classe',
+      'enumeration',
+      'IDepotDemande',
+      'DepotDemandeSql',
+      'ServiceConges',
+      'DepotEnMemoire',
+    ],
+    bonnesReponses: ['contrat', 'IDepotDemande', 'DepotDemandeSql'],
     explication:
-      '`interface IServiceConges` définit le contrat. `ServiceConges : IServiceConges` en est l\'implémentation. Le constructeur reçoit `IDemandeRepository` (abstraction), pas `DemandeRepository` (concret) : c\'est la DIP. On peut ainsi substituer un faux repository en tests.',
+      'Le service déclare ce dont il a besoin (le contrat) et le reçoit de l’extérieur. En production on lui passe le dépôt qui parle à la base, en test un dépôt en mémoire — sans modifier une ligne du service. Ce contrat s’appelle interface en C# ou Java, protocole en Swift, classe abstraite en Python ; le principe ne change pas.',
   },
   {
     id: 'solid-007',
@@ -119,26 +129,28 @@ public class ServiceConges : ___2___
     theme: 'solid',
     type: 'vrai_faux',
     difficulte: 1,
-    enonce: 'En ASP.NET Core, enregistrer `services.AddScoped<IServiceConges, ServiceConges>()` est une application du principe de Dependency Inversion.',
+    enonce:
+      'Déclarer dans un conteneur d’injection qu’un contrat se résout vers une implémentation concrète est une application de l’inversion des dépendances.',
     bonneReponse: true,
     explication:
-      'Le conteneur d\'injection résoudra automatiquement `IServiceConges` en injectant `ServiceConges`. Les contrôleurs et services qui déclarent `IServiceConges` dans leur constructeur ne connaissent que l\'abstraction — DIP en action.',
+      'Le conteneur fait le lien à un seul endroit ; tout le reste du code ne manipule que le contrat. Changer d’implémentation revient à changer cette ligne de configuration. Les cadriciels modernes fournissent tous ce mécanisme, sous des noms différents — conteneur de services, injecteur, fournisseur.',
   },
   {
     id: 'solid-009',
     theme: 'solid',
     type: 'qcm',
     difficulte: 3,
-    enonce: 'On veut ajouter un nouveau type de calcul de prime (ex. `PrimeTerrain`) sans modifier la classe `ServicePaie` existante. Quelle approche respecte le principe **Open/Closed** ?',
+    enonce:
+      'On veut ajouter un nouveau mode de calcul de prime sans modifier le service de paie existant. Quelle approche respecte le principe ouvert/fermé ?',
     options: [
-      'Ajouter un `if (type == "terrain")` dans `ServicePaie.CalculerPrime()`',
-      'Créer une interface `ICalculPrime` et faire implémenter `PrimeTerrain` par une nouvelle classe',
-      'Rendre `ServicePaie` abstraite et forcer la surcharge de `CalculerPrime()`',
-      'Dupliquer `ServicePaie` en `ServicePaieV2` avec le nouveau cas',
+      'Définir un contrat de calcul et créer une nouvelle implémentation pour ce mode',
+      'Ajouter une condition sur le type de prime dans la méthode de calcul existante',
+      'Rendre le service abstrait et forcer chaque sous-classe à redéfinir le calcul',
+      'Dupliquer le service de paie en une seconde version qui gère le nouveau cas',
     ],
-    bonneReponse: 1,
+    bonneReponse: 0,
     explication:
-      'OCP = étendre sans modifier. On crée `ICalculPrime` avec `decimal Calculer(Employe e)`, implémentée par `PrimeStandard`, `PrimeTerrain`, etc. `ServicePaie` reçoit l\'interface par injection : on ajoute un nouveau type sans toucher au code existant.',
+      'Ouvert à l’extension, fermé à la modification : le service reçoit un calculateur qui respecte le contrat, et ajouter un mode revient à écrire une nouvelle classe sans toucher au code existant, donc sans risque de régression. Empiler des conditions fait grossir une méthode que chaque ajout oblige à retester en entier.',
   },
   {
     id: 'solid-010',

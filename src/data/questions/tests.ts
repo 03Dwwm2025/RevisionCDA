@@ -35,27 +35,23 @@ export const questionsTests: Question[] = [
     theme: 'tests',
     type: 'completer_code',
     difficulte: 2,
-    enonce: 'Complétez ce test unitaire xUnit (.NET) qui suit le pattern **AAA**.',
-    codeAvecTrous: `[___1___]
-public void Deposer_RefuseSiDatesIncoherentes()
-{
-    // ___2___ : préparer le contexte
-    var service = new ServiceConges(new FakeRepository());
+    enonce: 'Complétez ce test unitaire écrit selon le patron AAA.',
+    codeAvecTrous: `test "refuse une demande dont la date de fin precede la date de debut" :
 
-    // Act : exécuter l'action à tester
-    var resultat = service.Deposer(
-        idSalarie: 1,
-        debut: new DateOnly(2026, 7, 10),
-        fin:   new DateOnly(2026, 7, 1)   // fin < début
-    );
+    # ___1___ : préparer le contexte et les doublures
+    service = nouveau ServiceConges(nouveau DepotFactice())
 
-    // ___3___ : vérifier le résultat
-    Assert.False(resultat.Succes);
-}`,
-    choix: ['Fact', 'Theory', 'Test', 'Arrange', 'Setup', 'Prepare', 'Assert', 'Verify', 'Check'],
-    bonnesReponses: ['Fact', 'Arrange', 'Assert'],
+    # ___2___ : exécuter l'action à tester, une seule fois
+    resultat = service.deposer(idSalarie = 1,
+                               debut = "2026-07-10",
+                               fin   = "2026-07-01")
+
+    # ___3___ : vérifier le résultat attendu
+    verifier(resultat.succes == faux)`,
+    choix: ['Arrange', 'Act', 'Assert', 'Setup', 'Run', 'Check'],
+    bonnesReponses: ['Arrange', 'Act', 'Assert'],
     explication:
-      '`[Fact]` marque un test sans paramètre dans xUnit (`[Theory]` pour les tests paramétrés). AAA = Arrange (préparer les données et dépendances), Act (appeler le code sous test), Assert (vérifier le résultat). `FakeRepository` est un test double qui remplace la vraie BDD.',
+      'Arrange prépare, Act exécute une seule action, Assert vérifie. Ce découpage se retrouve dans tous les cadriciels de test, sous des noms voisins — given/when/then côté comportement. Le dépôt factice remplace la base de données : le test reste rapide et ne dépend d’aucune infrastructure.',
   },
   {
     id: 'tests-004',

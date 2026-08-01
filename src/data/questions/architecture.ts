@@ -21,16 +21,16 @@ export const questionsArchitecture: Question[] = [
     theme: 'architecture',
     type: 'remettre_ordre',
     difficulte: 1,
-    enonce: 'Remettez dans l\'ordre le flux d\'une requête POST dans une architecture en couches.',
+    enonce: 'Remettez dans l’ordre le flux d’une requête de création dans une architecture en couches.',
     elements: [
-      'Le client envoie POST /api/demandes avec le corps JSON',
-      'Le Controller désérialise et valide le DTO (`ModelState`)',
-      'Le Service applique les règles métier (dates cohérentes, solde suffisant)',
-      'Le Repository exécute un INSERT paramétré en base de données',
-      'La réponse remonte : 201 Created avec la ressource créée',
+      'Le client envoie la requête avec le corps JSON',
+      'La couche de présentation désérialise et valide le format des données',
+      'La couche métier applique les règles de gestion',
+      'La couche d’accès aux données exécute une insertion paramétrée',
+      'La réponse remonte les couches jusqu’au client',
     ],
     explication:
-      'Le flux est strictement unidirectionnel à l\'aller : Client → Controller → Service → Repository → BDD. Chaque couche ne communique qu\'avec ses voisines immédiates. La BDD ne "remonte" pas directement jusqu\'au Controller.',
+      'Le flux est strictement unidirectionnel à l’aller, et chaque couche ne parle qu’à sa voisine immédiate. La base ne remonte pas directement jusqu’à la présentation : c’est ce cloisonnement qui rend chaque couche remplaçable et testable isolément.',
   },
   {
     id: 'archi-003',
@@ -58,71 +58,75 @@ export const questionsArchitecture: Question[] = [
     theme: 'architecture',
     type: 'completer_code',
     difficulte: 2,
-    enonce: 'Complétez ce Repository C# qui centralise les requêtes SQL paramétrées.',
-    codeAvecTrous: `public class DemandeRepository
-{
-    private readonly string _connString;
-    public DemandeRepository(string cs) => _connString = cs;
+    enonce:
+      'Complétez ce pseudo-code de couche d’accès aux données pour que la requête soit protégée contre l’injection SQL.',
+    codeAvecTrous: `fonction listerDemandesParSalarie(idSalarie) :
+    # La valeur ne doit pas entrer dans le texte de la requête
+    requete = "SELECT idDemande, dateDebut, statut
+               FROM Demande WHERE idSalarie = ___1___"
 
-    public List<Demande> GetParSalarie(int idSalarie)
-    {
-        var list = new List<Demande>();
-        using var conn = new ___1___(_connString);
-        var sql = @"SELECT idDemande, dateDebut, dateFin, statut
-                    FROM Demande WHERE idSalarie = ___2___";
-        using var cmd = new SqlCommand(sql, conn);
-        cmd.Parameters.___3___("@id", idSalarie);
-        conn.Open();
-        // ... lecture du reader ...
-        return list;
-    }
-}`,
-    choix: ['SqlConnection', 'DbConnection', 'Connection', '@id', '?', '{id}', 'AddWithValue', 'Add', 'Append'],
-    bonnesReponses: ['SqlConnection', '@id', 'AddWithValue'],
+    commande = connexion.preparer(requete)
+    commande.___2___("idSalarie", idSalarie)
+
+    retourner commande.___3___()`,
+    choix: [
+      ':idSalarie',
+      '" + idSalarie + "',
+      '{idSalarie}',
+      'lierParametre',
+      'concatener',
+      'formater',
+      'executerLecture',
+      'executerTexte',
+    ],
+    bonnesReponses: [':idSalarie', 'lierParametre', 'executerLecture'],
     explication:
-      '`SqlConnection` ouvre la connexion SQL Server. `@id` est le paramètre nommé dans la requête. `AddWithValue("@id", idSalarie)` lie la valeur sans concaténation — c\'est la protection anti-injection SQL. Le `using` garantit la fermeture de la connexion même en cas d\'exception.',
+      'La requête est écrite une fois avec un emplacement nommé ; la valeur est transmise à part et traitée comme une donnée, jamais comme du code. Concaténer la valeur dans le texte ouvre l’injection SQL. Le nom de l’emplacement varie selon la technologie (`:nom`, `@nom` ou `?`), le principe est identique partout, et un ORM le fait automatiquement.',
   },
   {
     id: 'archi-006',
     theme: 'architecture',
     type: 'qcm',
     difficulte: 2,
-    enonce: 'Pourquoi le Service (couche métier) ne doit-il pas dépendre directement de `DemandeRepository` (classe concrète) mais de `IDemandeRepository` (interface) ?',
+    enonce:
+      'Pourquoi la couche métier doit-elle dépendre d’une interface de dépôt plutôt que de la classe concrète qui parle à la base ?',
     options: [
-      'Pour des raisons de performance (les interfaces sont plus rapides)',
-      'Pour permettre l\'injection d\'un faux repository en test et respecter la Dependency Inversion (DIP)',
-      'Parce que C# n\'autorise pas l\'instanciation directe d\'un repository',
-      'Pour cacher les requêtes SQL au compilateur',
+      'Pour pouvoir injecter un faux dépôt en test et respecter l’inversion des dépendances',
+      'Pour des raisons de performance : les interfaces sont plus rapides',
+      'Parce qu’un langage objet interdit d’instancier directement une classe de dépôt',
+      'Pour masquer les requêtes SQL au compilateur',
     ],
-    bonneReponse: 1,
+    bonneReponse: 0,
     explication:
-      'Si `ServiceConges` dépend de `IDemandeRepository`, on peut injecter un `FakeRepository` en test sans avoir de BDD. C\'est DIP (SOLID) + testabilité. Le conteneur d\'injection (ASP.NET Core) résout l\'interface vers la vraie implémentation en production.',
+      'En dépendant du contrat et non de l’implémentation, on peut passer un faux dépôt en mémoire lors des tests : la couche métier se teste sans base de données. C’est le D de SOLID, et c’est aussi ce qui permet de changer de moteur de stockage sans réécrire le métier.',
   },
   {
     id: 'archi-007',
     theme: 'architecture',
     type: 'vrai_faux',
     difficulte: 2,
-    enonce: 'La validation des données dans le Controller (ex. `ModelState.IsValid`) est suffisante ; il n\'est pas nécessaire de revalider dans le Service.',
+    enonce:
+      'Valider le format des données à l’entrée suffit : il est inutile de vérifier quoi que ce soit dans la couche métier.',
     bonneReponse: false,
     explication:
-      'La validation Controller vérifie la forme (types, longueurs, annotations). Le Service doit valider les **règles métier** : dates cohérentes, solde suffisant, pas de chevauchement. Ces règles ne sont pas exprimables avec des Data Annotations. Défense en profondeur : chaque couche valide ce qui la concerne.',
+      'La validation d’entrée vérifie la forme : champ présent, type correct, longueur respectée. La couche métier vérifie la cohérence : solde suffisant, absence de chevauchement, droit d’agir. Ces règles exigent de consulter d’autres données, elles ne peuvent pas s’exprimer par une simple contrainte de format.',
   },
   {
     id: 'archi-008',
     theme: 'architecture',
     type: 'qcm',
     difficulte: 3,
-    enonce: 'Qu\'est-ce qu\'un **DTO** (Data Transfer Object) et pourquoi l\'utiliser plutôt que l\'entité directement ?',
+    enonce:
+      'Qu’est-ce qu’un objet de transfert (DTO) et pourquoi l’utiliser plutôt que l’entité de la base ?',
     options: [
-      'Un DTO est un alias pour une entité — les deux termes sont interchangeables',
-      'Un DTO contient uniquement les données nécessaires à un échange précis (ex. création), évitant d\'exposer des champs sensibles ou internes de l\'entité',
-      'Un DTO est une entité sérialisée en JSON automatiquement par ASP.NET Core',
-      'Un DTO remplace la couche Repository pour les opérations simples',
+      'Un objet qui ne porte que les données utiles à un échange précis, sans exposer les champs internes de l’entité',
+      'Un autre nom pour une entité : les deux termes sont interchangeables',
+      'Une entité convertie automatiquement en JSON par le cadriciel',
+      'Un remplacement de la couche d’accès aux données pour les cas simples',
     ],
-    bonneReponse: 1,
+    bonneReponse: 0,
     explication:
-      'L\'entité `Salarie` peut contenir `hashMotDePasse`, `soldeConges`, `idManager`… On ne veut pas tout exposer en API. Le DTO `SalarieDto` ne contient que `nom` et `email`. Avantage : découple le schéma interne du contrat API, protège les données sensibles, permet des versions d\'API indépendantes.',
+      'L’entité Salarié porte le condensat du mot de passe, l’identifiant du manager, des colonnes techniques. Rien de tout cela n’a sa place dans une réponse d’API. L’objet de transfert découple aussi le contrat public du schéma interne : la base peut évoluer sans casser les clients.',
   },
 
   // --- DTO, injection de dépendances ---
@@ -131,16 +135,16 @@ export const questionsArchitecture: Question[] = [
     theme: 'architecture',
     type: 'qcm',
     difficulte: 2,
-    enonce: 'Pourquoi ne doit-on pas exposer directement l\'entité de la base de données dans la réponse de l\'API ?',
+    enonce: 'Quel risque concret prend-on en renvoyant directement une entité de base de données dans une réponse d’API ?',
     options: [
-      'Pour des raisons de performance uniquement',
-      'Parce que l\'entité peut contenir des champs sensibles (hash mot de passe, données internes) qu\'on ne veut pas exposer',
-      'Parce que les entités ne peuvent pas être sérialisées en JSON',
-      'C\'est une contrainte du framework ASP.NET Core',
+      'Exposer des champs sensibles ou internes que personne n’a décidé de publier',
+      'Uniquement une perte de performance à la sérialisation',
+      'Rendre la réponse impossible à sérialiser en JSON',
+      'Aucun risque : c’est la pratique recommandée',
     ],
-    bonneReponse: 1,
+    bonneReponse: 0,
     explication:
-      'L\'entité `Salarie` contient potentiellement `hashMotDePasse`, `soldeConges`, `idManager`… On ne veut pas tout exposer. Le DTO (`SalarieReponseDto`) ne contient que `nom` et `email`. Autre avantage : si le schéma interne change, le contrat API reste stable.',
+      'Le danger est le champ qu’on oublie. Ajouter demain une colonne interne à l’entité la publie aussitôt dans l’API, sans que personne ne l’ait voulu. Avec un objet de transfert, tout champ exposé est un choix explicite.',
   },
   {
     id: 'archi-010',
@@ -157,15 +161,15 @@ export const questionsArchitecture: Question[] = [
     theme: 'architecture',
     type: 'association',
     difficulte: 2,
-    enonce: 'Associez chaque couche à ce qu\'elle NE doit PAS contenir.',
+    enonce: 'Associez chaque couche à ce qu’elle ne doit PAS contenir.',
     paires: [
-      { gauche: 'Controller', droite: 'Requêtes SQL ou logique métier complexe' },
-      { gauche: 'Service (Métier)', droite: 'Code HTTP (`HttpContext`, codes de statut)' },
-      { gauche: 'Repository', droite: 'Règles métier (validation du solde, chevauchement de dates)' },
-      { gauche: 'Vue / Front-end', droite: 'Logique de sécurité ou règles métier (côté client = non fiable)' },
+      { gauche: 'Présentation', droite: 'Des requêtes vers la base ou des règles de gestion complexes' },
+      { gauche: 'Métier', droite: 'Des notions propres à HTTP : codes de statut, en-têtes, requête' },
+      { gauche: 'Accès aux données', droite: 'Des règles de gestion comme le contrôle du solde' },
+      { gauche: 'Interface utilisateur', droite: 'La seule vérification de sécurité de l’application' },
     ],
     explication:
-      'Chaque couche doit rester dans son domaine. Un Controller qui fait du SQL est non testable. Un Service qui retourne des `IActionResult` est couplé à HTTP. Un Repository qui valide les règles métier les duplique. La Vue ne doit jamais être la seule ligne de défense.',
+      'Une couche de présentation qui écrit du SQL est intestable. Une couche métier qui manipule des codes HTTP ne sert plus qu’à une API et devient inutilisable pour une tâche planifiée ou un traitement par lots. Et une vérification qui n’existe que côté client se contourne en trois secondes.',
   },
   // --- Patrons de conception ---
   {
@@ -221,34 +225,36 @@ export const questionsArchitecture: Question[] = [
     enonce: 'Pourquoi le patron Singleton demande-t-il de la prudence ?',
     options: [
       'Parce qu’il porte un état global partagé, qui doit être conçu pour l’accès concurrent',
-      'Parce qu’il est interdit en C#',
+      'Parce qu’il est interdit dans les langages objet modernes',
       'Parce qu’il consomme beaucoup de mémoire',
       'Parce qu’il empêche l’injection de dépendances',
     ],
     bonneReponse: 0,
     explication:
-      'Une seule instance servie à toute l’application signifie que plusieurs requêtes simultanées la partagent. En ASP.NET Core, `AddSingleton` doit donc être réservé à des objets sans état modifiable, ou protégés contre les accès concurrents. Pour le reste, `AddScoped` est le choix par défaut.',
+      'Une seule instance pour toute l’application signifie que toutes les requêtes simultanées la partagent : le moindre état modifiable devient une source de bugs difficiles à reproduire. On le réserve aux objets sans état ou protégés contre les accès concurrents — une configuration, un cache conçu pour ça. Par défaut, on préfère une instance par requête.',
   },
   {
     id: 'archi-016',
     theme: 'architecture',
     type: 'completer_code',
     difficulte: 2,
-    enonce: 'Complétez ce patron Factory : le constructeur est fermé, la création passe par des méthodes nommées.',
-    codeAvecTrous: `public class Resultat
-{
-    public bool   Succes  { get; private set; }
-    public string Message { get; private set; } = "";
+    enonce:
+      'Complétez ce pseudo-code du patron Fabrique : le constructeur est fermé, la création passe par des méthodes nommées.',
+    codeAvecTrous: `classe Resultat :
+    succes : booleen
+    message : texte
 
-    ___1___ Resultat() { }   // constructeur inaccessible de l'extérieur
+    ___1___ constructeur()          # inaccessible depuis l'extérieur
 
-    public ___2___ Resultat Ok()               => new() { Succes = true };
-    public ___3___ Resultat Erreur(string msg) => new() { Succes = false, Message = msg };
-}`,
-    choix: ['private', 'public', 'protected', 'static', 'abstract', 'virtual'],
-    bonnesReponses: ['private', 'static', 'static'],
+    ___2___ fonction Ok() :
+        retourner nouveau Resultat(succes = vrai)
+
+    ___2___ fonction Erreur(msg) :
+        retourner nouveau Resultat(succes = ___3___, message = msg)`,
+    choix: ['prive', 'public', 'protege', 'statique', 'abstrait', 'vrai', 'faux'],
+    bonnesReponses: ['prive', 'statique', 'faux'],
     explication:
-      'Le constructeur privé interdit `new Resultat(...)` de l’extérieur ; les méthodes statiques nommées deviennent le seul moyen de créer l’objet. `Resultat.Erreur("Solde insuffisant")` se lit mieux qu’un constructeur à paramètres booléens, et empêche de construire un objet incohérent.',
+      'Le constructeur privé interdit de créer l’objet directement ; les méthodes statiques nommées deviennent le seul chemin. `Resultat.Erreur("Solde insuffisant")` se lit mieux qu’un constructeur à paramètres booléens, et surtout il devient impossible de fabriquer un objet incohérent — un échec sans message, par exemple.',
   },
   {
     id: 'archi-017',

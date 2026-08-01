@@ -63,19 +63,20 @@ export const questionsSecurite: Question[] = [
     theme: 'securite',
     type: 'completer_code',
     difficulte: 2,
-    enonce: 'Complétez ce code C# de hachage et vérification de mot de passe avec BCrypt.',
-    codeAvecTrous: `// À l'inscription : hacher et stocker
-string hash = BCrypt.Net.BCrypt.___1___(motDePasse);
-// Stocker 'hash' en base, jamais 'motDePasse'
+    enonce: 'Complétez ce pseudo-code d’inscription puis de connexion, avec un stockage sûr du mot de passe.',
+    codeAvecTrous: `# À l'inscription : on ne stocke que l'empreinte
+empreinte = ___1___(motDePasse)
+depot.enregistrer(email, empreinte)
 
-// À la connexion : vérifier
-bool estValide = BCrypt.Net.BCrypt.___2___(saisie, hashStocke);
-if (!estValide)
-    return ___3___("Identifiants incorrects.");`,
-    choix: ['HashPassword', 'Hash', 'Encrypt', 'Verify', 'Compare', 'Check', 'Unauthorized', 'Forbid', 'BadRequest'],
-    bonnesReponses: ['HashPassword', 'Verify', 'Unauthorized'],
+# À la connexion : on ne déchiffre pas, on compare
+si ___2___(saisie, empreinteStockee) :
+    retourner jetonDacces()
+sinon :
+    retourner reponse(___3___, "Identifiants incorrects.")`,
+    choix: ['hacher', 'chiffrer', 'encoder', 'verifier', 'dechiffrer', 'comparerTexte', '401', '403', '500'],
+    bonnesReponses: ['hacher', 'verifier', '401'],
     explication:
-      '`HashPassword` calcule le hash avec sel aléatoire intégré. `Verify` compare la saisie au hash stocké (recalcul du hash avec le sel extrait). `Unauthorized()` retourne 401. Ne jamais logger `motDePasse`, ne jamais stocker `hash` en clair dans les logs.',
+      'Le hachage est irréversible : on ne retrouve pas le mot de passe, on recalcule l’empreinte de la saisie et on la compare. Chiffrer serait une faute — une clé volée exposerait tous les comptes. Le 401 signale une authentification qui n’a pas abouti ; le message reste volontairement vague pour ne pas révéler si l’adresse existe.',
   },
   {
     id: 'secu-006',

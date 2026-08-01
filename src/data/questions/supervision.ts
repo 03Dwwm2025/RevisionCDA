@@ -136,16 +136,12 @@ export const questionsSupervision: Question[] = [
     theme: 'supervision',
     type: 'qcm',
     difficulte: 2,
-    enonce: 'Migrer une application de .NET 8 vers .NET 10 relève de quel type de maintenance ?',
-    options: [
-      'Adaptative',
-      'Corrective',
-      'Évolutive',
-      'Préventive',
-    ],
+    enonce:
+      'Migrer une application vers une nouvelle version majeure de son cadriciel, sans rien ajouter pour l’utilisateur, relève de quel type de maintenance ?',
+    options: ['Adaptative', 'Corrective', 'Évolutive', 'Préventive'],
     bonneReponse: 0,
     explication:
-      'La maintenance adaptative répond à un changement de l’environnement — nouvelle version d’un cadriciel, nouveau système d’exploitation, nouvelle obligation réglementaire. Aucune fonctionnalité n’est ajoutée pour l’utilisateur, mais l’application reste supportée et sécurisée.',
+      'La maintenance adaptative répond à un changement de l’environnement : nouvelle version d’un langage ou d’un cadriciel, changement de système d’exploitation, nouvelle obligation réglementaire. L’utilisateur ne voit rien de nouveau, mais l’application reste supportée et continue de recevoir des correctifs de sécurité.',
   },
   {
     id: 'super-011',

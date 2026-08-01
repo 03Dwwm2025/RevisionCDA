@@ -186,3 +186,64 @@ describe('compteurs affichés dans la navigation', () => {
     expect(NB_QUESTIONS_TOTAL).toBe(toutes.length);
   });
 });
+
+describe('indépendance vis-à-vis d’un langage ou d’un cadriciel', () => {
+  // Ce que le quiz DEMANDE doit rester répondable par un développeur Java,
+  // Python, PHP, JavaScript ou C#. L'explication, elle, a le droit de citer
+  // des syntaxes concrètes à titre d'exemple.
+  const VERROUS = [
+    'ASP.NET',
+    '[HttpGet',
+    '[HttpPost',
+    '[ApiController',
+    '[Authorize',
+    '[FromQuery',
+    '[FromBody',
+    'IActionResult',
+    'ControllerBase',
+    'ModelState',
+    'AddScoped',
+    'AddSingleton',
+    'AddTransient',
+    'builder.Services',
+    'Program.cs',
+    'appsettings',
+    'Data Annotation',
+    'Entity Framework',
+    'EF Core',
+    'xUnit',
+    '[Fact]',
+    '[Theory]',
+    'BCrypt.Net',
+    'dotnet ',
+    'npm ci',
+    'npm install',
+    'package-lock',
+    'NVARCHAR',
+    'IDENTITY',
+    'RAISERROR',
+    'GETDATE',
+    'C#',
+    '.NET',
+    'LINQ',
+    'StringBuilder',
+  ];
+
+  function partiesDemandees(q: Question): string[] {
+    const parties = [q.enonce];
+    if (q.type === 'qcm') parties.push(...q.options);
+    if (q.type === 'association') parties.push(...q.paires.flatMap((p) => [p.gauche, p.droite]));
+    if (q.type === 'completer_code') parties.push(q.codeAvecTrous, ...q.choix);
+    if (q.type === 'remettre_ordre') parties.push(...q.elements);
+    return parties;
+  }
+
+  it('ne demande aucune connaissance propre à un cadriciel ou à un écosystème', () => {
+    const fautives = toutes.flatMap((q) => {
+      const texte = partiesDemandees(q).join(' ');
+      const trouves = VERROUS.filter((v) => texte.includes(v));
+      return trouves.length > 0 ? [`${q.id} : ${trouves.join(', ')}`] : [];
+    });
+    expect(fautives).toEqual([]);
+  });
+});

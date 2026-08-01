@@ -7,66 +7,60 @@ export const questionsBackEnd: Question[] = [
     theme: 'back-end',
     type: 'vrai_faux',
     difficulte: 1,
-    enonce: 'La validation des données côté serveur est obligatoire même si le front-end valide déjà les données avant envoi.',
+    enonce:
+      'La validation des données côté serveur est obligatoire même si le front-end valide déjà les données avant envoi.',
     bonneReponse: true,
     explication:
-      'La validation front-end est du confort UX — elle peut être contournée en quelques secondes (Postman, curl, DevTools). La seule validation qui protège est celle du serveur. Il faut les deux, mais la validation serveur est la vraie ligne de défense.',
+      'La validation front-end est du confort d’usage — elle se contourne en quelques secondes avec un client HTTP ou les outils du navigateur. La seule validation qui protège est celle du serveur. Il faut les deux, mais la validation serveur est la vraie ligne de défense.',
   },
   {
     id: 'back-002',
     theme: 'back-end',
     type: 'association',
     difficulte: 1,
-    enonce: 'Associez chaque Data Annotation à ce qu\'elle valide.',
+    enonce: 'Associez chaque règle de validation à ce qu’elle vérifie sur une donnée reçue.',
     paires: [
-      { gauche: '[Required]', droite: 'Champ obligatoire — non null, non vide' },
-      { gauche: '[EmailAddress]', droite: 'Format e-mail valide (contient @ et un domaine)' },
-      { gauche: '[Range(0, 100)]', droite: 'Valeur numérique comprise entre 0 et 100' },
-      { gauche: '[MaxLength(50)]', droite: 'Longueur maximale de 50 caractères' },
+      { gauche: 'Obligatoire', droite: 'La valeur est présente et non vide' },
+      { gauche: 'Format', droite: 'La valeur respecte un motif attendu (adresse e-mail, code postal)' },
+      { gauche: 'Intervalle', droite: 'La valeur numérique est comprise entre un minimum et un maximum' },
+      { gauche: 'Longueur', droite: 'La chaîne ne dépasse pas le nombre de caractères autorisé' },
     ],
     explication:
-      'Les Data Annotations en C# s\'appliquent sur les propriétés des DTO. ASP.NET Core les vérifie automatiquement et remplit `ModelState`. Si `ModelState.IsValid` est false, on retourne `BadRequest(ModelState)` (400) avec les messages d\'erreur.',
+      'Ces quatre familles couvrent la validation de format, qui se déclare le plus souvent près du modèle d’entrée : annotations sur les propriétés en C# ou en Java (Bean Validation), schéma de validation en JavaScript (Zod, Joi), règles de formulaire en PHP (Laravel). Le mécanisme change, le découpage reste le même.',
   },
   {
     id: 'back-003',
     theme: 'back-end',
-    type: 'completer_code',
+    type: 'qcm',
     difficulte: 2,
-    enonce: 'Complétez ce DTO C# avec les Data Annotations de validation appropriées.',
-    codeAvecTrous: `public class InscriptionDto
-{
-    ___1___
-    [MaxLength(50)]
-    public string Nom { get; set; } = "";
-
-    ___2___
-    public string Email { get; set; } = "";
-
-    [Required]
-    ___3___
-    [RegularExpression(@"^(?=.*[A-Z])(?=.*\\d).{8,}$")]
-    public string MotDePasse { get; set; } = "";
-}`,
-    choix: ['[Required]', '[Optional]', '[NotNull]', '[EmailAddress]', '[Email]', '[ValidEmail]', '[MinLength(8)]', '[MinLength(6)]', '[Length(8)]'],
-    bonnesReponses: ['[Required]', '[EmailAddress]', '[MinLength(8)]'],
+    enonce:
+      'Une donnée reçue échoue à la validation de format. Que doit renvoyer l’API, et avec quel contenu ?',
+    options: [
+      'Un 400 Bad Request, avec la liste des champs fautifs et le motif du rejet',
+      'Un 500 Internal Server Error, puisque la requête n’a pas pu être traitée',
+      'Un 200 OK avec un champ `erreur` dans le corps, pour simplifier le client',
+      'Un 404 Not Found, la ressource valide n’existant pas',
+    ],
+    bonneReponse: 0,
     explication:
-      '`[Required]` rend le champ obligatoire. `[EmailAddress]` valide le format e-mail. `[MinLength(8)]` impose une longueur minimale. La regex `(?=.*[A-Z])(?=.*\\d)` est un lookahead qui vérifie qu\'il y a au moins une majuscule et un chiffre. Ces attributs sont vérifiés via `ModelState.IsValid` dans le Controller.',
+      'La faute vient du client : c’est un 4xx, et 400 pour des données malformées. Renvoyer 500 accuserait le serveur à tort et déclencherait des alertes pour rien. Renvoyer 200 oblige chaque client à inspecter le corps pour savoir si ça a marché. Le détail par champ permet au front d’afficher l’erreur au bon endroit.',
   },
   {
     id: 'back-004',
     theme: 'back-end',
     type: 'qcm',
     difficulte: 2,
-    enonce: 'Dans un Controller ASP.NET Core avec `[ApiController]`, que se passe-t-il si `ModelState.IsValid` est `false` et qu\'on ne le vérifie pas explicitement ?',
+    enonce:
+      'Où se place la validation de format dans une architecture en couches, et pourquoi pas ailleurs ?',
     options: [
-      'ASP.NET Core retourne automatiquement un 400 Bad Request avant même d\'entrer dans la méthode',
-      'La requête est traitée normalement, sans erreur',
-      'Une exception `InvalidModelStateException` est levée',
-      'ASP.NET Core corrige automatiquement les données invalides',
+      'À l’entrée, dans la couche de présentation : les données malformées sont rejetées avant d’atteindre le métier',
+      'Dans le Repository, au plus près de la base de données',
+      'Dans la couche métier, avec les règles de gestion',
+      'Nulle part : les contraintes de la base suffisent à tout rejeter',
     ],
     bonneReponse: 0,
     explication:
-      'Avec `[ApiController]`, ASP.NET Core active le comportement de validation automatique : si les Data Annotations ne sont pas respectées, le framework retourne immédiatement un `400 Bad Request` avec le détail des erreurs dans `ModelState`, **avant d\'exécuter la méthode du controller**. C\'est l\'un des avantages de `[ApiController]`.',
+      'Rejeter tôt évite de faire descendre des données inutilisables dans tout le système. La couche métier reçoit alors des données bien formées et se concentre sur les règles de gestion. Les contraintes de la base restent le dernier filet, mais leurs messages d’erreur sont inexploitables pour l’utilisateur final.',
   },
 
   // --- Gestion des erreurs ---
@@ -75,43 +69,45 @@ export const questionsBackEnd: Question[] = [
     theme: 'back-end',
     type: 'qcm',
     difficulte: 1,
-    enonce: 'Pourquoi ne doit-on pas afficher la stack trace au client en production ?',
+    enonce: 'Pourquoi ne doit-on pas renvoyer la trace d’exécution d’une erreur au client en production ?',
     options: [
+      'Parce qu’elle révèle la structure interne : chemins de fichiers, versions de bibliothèques, noms de tables',
       'Pour économiser de la bande passante',
-      'Parce que la stack trace révèle la structure interne du code (chemins de fichiers, versions de librairies, noms de tables SQL) qui peut aider un attaquant',
-      'Parce que les navigateurs ne peuvent pas afficher une stack trace',
-      'Pour respecter une contrainte de performance d\'ASP.NET Core',
+      'Parce que les navigateurs ne savent pas l’afficher',
+      'Parce que cela ralentit le serveur',
     ],
-    bonneReponse: 1,
+    bonneReponse: 0,
     explication:
-      'Une stack trace expose des informations précieuses : chemin absolu des fichiers, version du framework, requêtes SQL, noms de classes… C\'est du renseignement gratuit pour un attaquant. En production, on utilise `app.UseExceptionHandler("/error")` qui retourne un message générique. En dev, `app.UseDeveloperExceptionPage()` affiche la stack trace compète.',
+      'Une trace d’exécution est du renseignement gratuit pour un attaquant : elle expose l’arborescence du projet, la version du cadriciel, parfois la requête SQL fautive. En production on renvoie un message générique et un identifiant de corrélation, et on garde le détail dans les journaux serveur. Cela relève d’OWASP A05, mauvaise configuration.',
   },
   {
     id: 'back-006',
     theme: 'back-end',
     type: 'vrai_faux',
     difficulte: 2,
-    enonce: 'Le middleware `UseAuthentication` doit être placé **avant** `UseAuthorization` dans le pipeline ASP.NET Core.',
+    enonce:
+      'Dans la chaîne de traitement d’une requête HTTP, l’étape qui identifie l’utilisateur doit s’exécuter avant celle qui vérifie ses droits.',
     bonneReponse: true,
     explication:
-      'L\'ordre des middlewares est strict. `UseAuthentication` identifie l\'utilisateur (lit et valide le JWT, remplit `HttpContext.User`). `UseAuthorization` vérifie ensuite les droits de cet utilisateur (`[Authorize]`, rôles). Si l\'ordre est inversé, l\'autorisation est vérifiée avant que l\'identité soit établie — les routes protégées seraient accessibles à tous.',
+      'L’authentification établit QUI parle, l’autorisation vérifie ce que cette personne a le droit de faire. Inverser les deux revient à contrôler des droits sur une identité encore inconnue : les routes protégées deviennent accessibles. Tous les cadriciels imposent cet ordre, quel que soit le nom donné aux étapes (middleware, filtre, intercepteur).',
   },
   {
     id: 'back-007',
     theme: 'back-end',
     type: 'remettre_ordre',
     difficulte: 2,
-    enonce: 'Remettez dans l\'ordre les middlewares ASP.NET Core du plus externe au plus interne (ordre dans `Program.cs`).',
+    enonce:
+      'Remettez dans l’ordre les étapes traversées par une requête HTTP entrante, de la plus externe à la plus interne.',
     elements: [
-      'UseExceptionHandler — capture toutes les exceptions non gérées',
-      'UseHttpsRedirection — force HTTPS',
-      'UseCors — politique CORS',
-      'UseAuthentication — vérifie le JWT, identifie l\'utilisateur',
-      'UseAuthorization — vérifie les droits ([Authorize])',
-      'MapControllers — route vers les controllers',
+      'Capture globale des exceptions',
+      'Redirection vers HTTPS',
+      'Politique de partage entre origines (CORS)',
+      'Authentification : identifier l’utilisateur',
+      'Autorisation : vérifier ses droits',
+      'Routage vers le point d’entrée métier',
     ],
     explication:
-      'L\'exception handler doit être en premier pour capturer les erreurs des autres middlewares. HTTPS ensuite. CORS avant l\'auth. Authentication avant Authorization. MapControllers en dernier : c\'est l\'endpoint final. Chaque middleware englobe les suivants comme des poupées russes.',
+      'La capture des exceptions englobe tout, sinon une erreur survenue plus loin échappe au traitement. HTTPS avant le reste. Le contrôle d’origine avant l’authentification. Identifier avant d’autoriser. Le routage en dernier : c’est la destination. Cette chaîne s’appelle middleware, filtres ou intercepteurs selon la technologie, mais l’ordre est le même partout.',
   },
 
   // --- Configuration ---
@@ -120,93 +116,92 @@ export const questionsBackEnd: Question[] = [
     theme: 'back-end',
     type: 'qcm',
     difficulte: 1,
-    enonce: 'Où doit-on stocker un secret comme la clé JWT (`Jwt:Secret`) dans une application ASP.NET Core ?',
+    enonce: 'Où stocker la clé secrète qui signe les jetons d’authentification ?',
     options: [
-      'Dans `appsettings.json` pour que tous les développeurs y aient accès',
-      'En dur dans le code C# pour éviter tout fichier externe',
-      'Dans une variable d\'environnement sur le serveur ou un gestionnaire de secrets',
-      'Dans la base de données dans une table `Configuration`',
+      'Dans une variable d’environnement du serveur, ou un coffre à secrets',
+      'Dans le fichier de configuration versionné, pour que l’équipe y ait accès',
+      'En dur dans le code, pour éviter tout fichier externe',
+      'Dans une table de la base de données',
     ],
-    bonneReponse: 2,
+    bonneReponse: 0,
     explication:
-      '`appsettings.json` est commité dans Git — visible de toute l\'équipe (et potentiellement public). Un secret en dur dans le code est encore pire. Les variables d\'environnement existent uniquement sur le serveur d\'exécution avec des droits restreints. En local : `dotnet user-secrets`. En prod : variables d\'env ou coffre (Azure Key Vault, HashiCorp Vault).',
+      'Un fichier de configuration versionné est visible de toute l’équipe et de quiconque accède au dépôt — et un secret entré une fois dans l’historique Git y reste. En dur dans le code, c’est pire encore. La variable d’environnement n’existe que sur la machine d’exécution ; un coffre (Vault, Key Vault, Secrets Manager) ajoute la rotation et la traçabilité.',
   },
   {
     id: 'back-009',
     theme: 'back-end',
     type: 'association',
     difficulte: 2,
-    enonce: 'Associez chaque fichier de configuration ASP.NET Core à son rôle.',
+    enonce: 'Associez chaque source de configuration à son usage.',
     paires: [
-      { gauche: '`appsettings.json`', droite: 'Configuration de base, commité dans Git, sans secrets' },
-      { gauche: '`appsettings.Development.json`', droite: 'Surcharges pour le développement local, commité' },
-      { gauche: 'Variables d\'environnement', droite: 'Secrets et config de production, jamais committés' },
-      { gauche: 'User Secrets (`dotnet user-secrets`)', droite: 'Secrets locaux du développeur, hors du repo' },
+      { gauche: 'Fichier de configuration versionné', droite: 'Réglages de base, sans aucun secret' },
+      { gauche: 'Fichier de surcharge par environnement', droite: 'Ajustements pour le développement local' },
+      { gauche: 'Variables d’environnement', droite: 'Secrets et réglages de production, hors du dépôt' },
+      { gauche: 'Coffre à secrets', droite: 'Secrets partagés, avec rotation et traçabilité des accès' },
     ],
     explication:
-      'ASP.NET Core fusionne les sources dans l\'ordre : `appsettings.json` < `appsettings.{env}.json` < variables d\'environnement. Les variables d\'env ont la priorité la plus haute et écrasent ce qui est dans les fichiers JSON — c\'est ce mécanisme qui permet d\'avoir des secrets en prod sans les commiter.',
+      'Ces sources se superposent du plus général au plus spécifique, les variables d’environnement ayant la priorité la plus haute. C’est ce mécanisme qui permet de livrer la même image applicative partout et de ne changer que la configuration — le principe de la douzaine de facteurs (12-factor app).',
   },
 
-  // --- Logging ---
+  // --- Journalisation ---
   {
     id: 'back-010',
     theme: 'back-end',
     type: 'association',
     difficulte: 1,
-    enonce: 'Associez chaque niveau de log à son utilisation.',
+    enonce: 'Associez chaque niveau de journalisation à son usage.',
     paires: [
-      { gauche: 'LogDebug', droite: 'Informations de débogage détaillées — uniquement en développement' },
-      { gauche: 'LogInformation', droite: 'Événements normaux du flux applicatif (connexion, création)' },
-      { gauche: 'LogWarning', droite: 'Situation anormale mais non bloquante (tentative suspecte)' },
-      { gauche: 'LogError', droite: 'Erreur qui a empêché une opération (exception SQL, timeout)' },
+      { gauche: 'Debug', droite: 'Détails de mise au point — uniquement en développement' },
+      { gauche: 'Information', droite: 'Événements normaux du flux (connexion, création)' },
+      { gauche: 'Warning', droite: 'Situation anormale mais non bloquante' },
+      { gauche: 'Error', droite: 'Erreur qui a empêché une opération d’aboutir' },
     ],
     explication:
-      'En production, le niveau minimum est généralement `Information` (on ne veut pas `Debug` qui est très verbeux). `Warning` et `Error` génèrent des alertes. `Critical` signale une défaillance système complète. La hiérarchie : Trace < Debug < Information < Warning < Error < Critical.',
+      'La hiérarchie Trace < Debug < Information < Warning < Error < Critical est commune à la plupart des bibliothèques de journalisation, en .NET, Java ou Python. En production, on filtre à partir d’Information : Debug est trop verbeux et fait grossir les journaux pour rien.',
   },
   {
     id: 'back-011',
     theme: 'back-end',
     type: 'vrai_faux',
     difficulte: 2,
-    enonce: 'Il est acceptable de logger le mot de passe d\'un utilisateur (même haché) pour faciliter le débogage des erreurs d\'authentification.',
+    enonce:
+      'Il est acceptable de journaliser le mot de passe d’un utilisateur, même haché, pour faciliter le débogage.',
     bonneReponse: false,
     explication:
-      'Jamais. Le hash du mot de passe est une donnée sensible — si quelqu\'un accède aux logs, il peut tenter des attaques hors ligne. Les logs doivent contenir l\'événement ("connexion échouée pour user@example.com") sans aucune donnée secrète. OWASP A09 : les logs sont une surface d\'attaque à ne pas négliger.',
+      'Le condensat d’un mot de passe reste une donnée sensible : qui accède aux journaux peut tenter de le casser hors ligne, tranquillement. Un journal enregistre l’événement — « connexion échouée pour tel compte, depuis telle adresse » — pas les secrets. Les journaux sont souvent lisibles par l’équipe d’exploitation : c’est une surface de fuite (OWASP A09).',
   },
   {
     id: 'back-012',
     theme: 'back-end',
-    type: 'completer_code',
+    type: 'qcm',
     difficulte: 2,
-    enonce: 'Complétez ce middleware pipeline ASP.NET Core dans le bon ordre.',
-    codeAvecTrous: `var app = builder.Build();
-
-app.___1___("/error");    // 1. Capturer les exceptions
-app.UseHttpsRedirection();            // 2. Forcer HTTPS
-app.___2___();             // 3. Identifier l'utilisateur (JWT)
-app.UseAuthorization();               // 4. Vérifier les droits
-app.___3___();             // 5. Router vers les controllers
-
-app.Run();`,
-    choix: ['UseExceptionHandler', 'UseErrorPage', 'UseDeveloperException', 'UseAuthentication', 'UseJwt', 'UseIdentity', 'MapControllers', 'UseControllers', 'UseRouting'],
-    bonnesReponses: ['UseExceptionHandler', 'UseAuthentication', 'MapControllers'],
+    enonce:
+      'Une opération échoue à cause d’une erreur technique (base injoignable). Que journaliser, et que renvoyer au client ?',
+    options: [
+      'Journaliser l’exception complète avec un identifiant de corrélation, renvoyer un message générique portant ce même identifiant',
+      'Journaliser un message court et renvoyer l’exception complète au client pour qu’il la transmette au support',
+      'Ne rien journaliser et renvoyer un message générique : les journaux coûtent cher',
+      'Journaliser et renvoyer exactement la même chose, pour rester cohérent',
+    ],
+    bonneReponse: 0,
     explication:
-      '`UseExceptionHandler` en premier pour englober tout le pipeline. `UseAuthentication` avant `UseAuthorization` (identifier avant d\'autoriser). `MapControllers` en dernier — c\'est l\'endpoint final qui appelle la méthode du controller. L\'ordre est une convention stricte : en changer peut créer des failles de sécurité ou des erreurs silencieuses.',
+      'L’identifiant de corrélation est le pont entre les deux : l’utilisateur signale « erreur ABC-123 », on retrouve la trace complète dans les journaux. Il donne le diagnostic sans rien exposer. Renvoyer l’exception au client, c’est la fuite d’informations décrite plus haut.',
   },
   {
     id: 'back-013',
     theme: 'back-end',
     type: 'qcm',
     difficulte: 3,
-    enonce: 'Quelle est la différence entre la **validation** (Data Annotations, ModelState) et la **logique métier** (Service) ?',
+    enonce:
+      'Quelle est la différence entre la validation des données et les règles de gestion, et où se placent-elles ?',
     options: [
-      'La validation vérifie le format des données ; la logique métier vérifie les règles business — les deux doivent être dans le Controller',
-      'La validation vérifie le format et le type des données (côté Controller) ; la logique métier vérifie les règles applicatives (solde suffisant, chevauchement de dates) — côté Service',
-      'La validation est uniquement côté front-end ; la logique métier est côté serveur',
-      'Il n\'y a pas de différence — tout peut être mis dans les Data Annotations',
+      'La validation vérifie le format à l’entrée ; les règles de gestion vérifient la cohérence métier, dans la couche métier',
+      'La validation vérifie le format et les règles de gestion, toutes deux à l’entrée',
+      'La validation est côté client, les règles de gestion côté serveur',
+      'Il n’y a pas de différence : tout se déclare sur le modèle d’entrée',
     ],
-    bonneReponse: 1,
+    bonneReponse: 0,
     explication:
-      'Les Data Annotations vérifient le **format** : champ non vide, e-mail valide, longueur respectée. Le Service vérifie les **règles métier** : est-ce que le salarié a assez de solde ? Y a-t-il un chevauchement avec une autre demande ? Ces règles dépendent du contexte (autres données en base) et ne peuvent pas être exprimées avec des annotations simples. La séparation Controller/Service suit ce découpage.',
+      'La validation répond à « cette donnée est-elle bien formée ? » — champ présent, adresse e-mail plausible, longueur respectée. Elle ne dépend que de la donnée elle-même. Une règle de gestion répond à « cette opération est-elle permise ? » — solde suffisant, pas de chevauchement de dates — et exige de consulter d’autres données. C’est pour ça qu’elle vit dans la couche métier, pas sur le modèle d’entrée.',
   },
 ];

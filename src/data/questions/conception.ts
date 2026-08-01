@@ -138,25 +138,25 @@ export const questionsConception: Question[] = [
     theme: 'conception',
     type: 'completer_code',
     difficulte: 3,
-    enonce: 'Complétez ce script DDL qui traduit le MPD de CongeApp (règles de passage MCD → MPD).',
+    enonce: 'Complétez ce script de création de tables qui traduit le modèle logique en physique.',
     codeAvecTrous: `CREATE TABLE Salarie (
-  idSalarie  INT ___1___ IDENTITY,
-  nom        NVARCHAR(50)  NOT NULL,
-  email      NVARCHAR(120) NOT NULL ___2___
+  idSalarie  INT ___1___,
+  nom        VARCHAR(50)  NOT NULL,
+  email      VARCHAR(120) NOT NULL ___2___
 );
 
 CREATE TABLE Demande (
-  idDemande  INT PRIMARY KEY IDENTITY,
+  idDemande  INT PRIMARY KEY,
   dateDebut  DATE NOT NULL,
   dateFin    DATE NOT NULL,
-  statut     NVARCHAR(20) NOT NULL DEFAULT 'EN_ATTENTE',
+  statut     VARCHAR(20) NOT NULL DEFAULT 'EN_ATTENTE',
   idSalarie  INT NOT NULL,
   ___3___ (idSalarie) REFERENCES Salarie(idSalarie)
 );`,
     choix: ['PRIMARY KEY', 'UNIQUE KEY', 'NOT NULL', 'UNIQUE', 'DEFAULT NULL', 'FOREIGN KEY', 'INDEX', 'CHECK'],
     bonnesReponses: ['PRIMARY KEY', 'UNIQUE', 'FOREIGN KEY'],
     explication:
-      '`PRIMARY KEY` sur `idSalarie` garantit l\'unicité et sert d\'identifiant. `UNIQUE` sur `email` interdit les doublons. `FOREIGN KEY` dans `Demande` traduit l\'association MCD : une demande appartient à un salarié (cardinalité 1,1 du côté Demande).',
+      'La clé primaire sert d’identifiant unique. La contrainte d’unicité sur l’adresse interdit deux comptes avec le même e-mail. La clé étrangère traduit l’association du modèle conceptuel : une demande appartient à exactement un salarié, donc elle porte la référence.',
   },
   {
     id: 'concep-011',
@@ -468,11 +468,11 @@ CREATE TABLE Demande (
     type: 'qcm',
     difficulte: 1,
     enonce:
-      'Une table contient une colonne `competences` qui vaut « SQL, C#, Docker » pour un salarié. Quelle forme normale est violée ?',
+      'Une table contient une colonne `competences` qui vaut « SQL, Docker, Git » pour un salarié. Quelle forme normale est violée ?',
     options: ['La 1NF', 'La 2NF', 'La 3NF', 'Aucune, c’est correct'],
     bonneReponse: 0,
     explication:
-      'La 1NF exige des valeurs atomiques : une seule valeur par cellule. Avec une liste, on ne peut ni filtrer (WHERE competence = \'SQL\' échoue), ni indexer, ni compter proprement. La solution est une table de liaison avec une ligne par compétence.',
+      'La 1NF exige des valeurs atomiques : une seule valeur par cellule. Avec une liste, on ne peut ni filtrer sur une compétence précise, ni indexer, ni compter proprement. La solution est une table de liaison, avec une ligne par couple salarié-compétence.',
   },
   {
     id: 'concep-031',

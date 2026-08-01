@@ -355,4 +355,46 @@ ___3___:
     explication:
       '`docker exec -it api sh` : `-i` = mode interactif, `-t` = pseudo-terminal (TTY), `sh` = shell à lancer. Indispensable pour déboguer un conteneur en cours d\'exécution. `docker logs -f` suit les logs. `docker inspect` affiche les métadonnées JSON. `docker attach` se connecte au processus principal (dangereux : `Ctrl+C` arrête le conteneur).',
   },
+  {
+    id: 'docker-022',
+    theme: 'docker',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'À quoi sert un fichier `.dockerignore` ?',
+    options: [
+      'À exclure des fichiers du contexte de build : `node_modules`, `.git`, `.env`',
+      'À indiquer les conteneurs à ne pas démarrer',
+      'À ignorer les erreurs pendant la construction de l’image',
+      'À exclure des couches du cache Docker',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Sans lui, un `COPY . .` embarque tout : build plus lent, image plus lourde, et surtout des secrets copiés dans une couche de l’image, récupérables avec `docker history`. Même rôle et même syntaxe que le `.gitignore`, mais pour le contexte de build.',
+  },
+  {
+    id: 'docker-023',
+    theme: 'docker',
+    type: 'vrai_faux',
+    difficulte: 3,
+    enonce: 'Ajouter `USER nginx` à l’image officielle `nginx:alpine` suffit à la faire tourner sans root.',
+    bonneReponse: false,
+    explication:
+      'Le processus maître n’a alors plus le droit d’écrire `/var/run/nginx.pid` ni `/var/cache/nginx`, et le conteneur s’arrête au démarrage. Il faut soit l’image `nginxinc/nginx-unprivileged` (qui écoute sur 8080), soit ajouter les `chown` nécessaires. Pour une image applicative classique, `USER` seul suffit.',
+  },
+  {
+    id: 'docker-024',
+    theme: 'docker',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Pourquoi copier `package*.json` puis lancer `npm ci` AVANT de copier le reste du code dans un Dockerfile ?',
+    options: [
+      'Pour profiter du cache de couches : l’installation n’est refaite que si les dépendances changent',
+      'Parce que npm refuse de s’exécuter si le code source est présent',
+      'Pour réduire la taille finale de l’image',
+      'Parce que l’ordre des instructions est imposé par Docker',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Chaque instruction crée une couche mise en cache. Le code source change à chaque commit, les dépendances rarement : en les installant d’abord, on évite de retélécharger tout l’arbre npm à chaque build. C’est le gain le plus rentable sur un Dockerfile.',
+  },
 ];

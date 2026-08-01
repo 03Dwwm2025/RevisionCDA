@@ -447,16 +447,269 @@ CREATE TABLE Demande (
   {
     id: 'concep-016',
     theme: 'conception',
-    type: 'association',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'Deux managers valident la même demande au même instant. Les deux transactions lisent le statut « EN_ATTENTE » avant que l\'autre n\'ait écrit, et le solde est débité deux fois. Quelle propriété ACID est en cause ?',
+    options: [
+      'L\'isolation',
+      'L\'atomicité',
+      'La durabilité',
+      'La cohérence',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Le I d\'ACID est l\'Isolation, pas l\'Intégrité — c\'est le piège classique. L\'isolation garantit que deux transactions concurrentes se déroulent comme si chacune était seule sur la base. L\'atomicité, elle, ne concerne qu\'une transaction prise isolément (tout ou rien). L\'intégrité est une propriété du modèle de données (contraintes NOT NULL, UNIQUE, FOREIGN KEY), pas une lettre d\'ACID.',
+  },
+  // --- Normalisation ---
+  {
+    id: 'concep-047',
+    theme: 'conception',
+    type: 'qcm',
     difficulte: 1,
-    enonce: 'Associez chaque lettre d\'ACID à sa signification (propriétés d\'une base de données).',
-    paires: [
-      { gauche: 'A — Atomicité', droite: 'Tout ou rien : toutes les opérations réussissent ou aucune' },
-      { gauche: 'C — Cohérence', droite: 'La base passe d\'un état valide à un autre état valide' },
-      { gauche: 'I — Intégrité', droite: 'Les données restent exactes et cohérentes (contraintes respectées)' },
-      { gauche: 'D — Durabilité', droite: 'Une transaction validée (COMMIT) survit aux pannes système' },
+    enonce:
+      'Une table contient une colonne `competences` qui vaut « SQL, C#, Docker » pour un salarié. Quelle forme normale est violée ?',
+    options: ['La 1NF', 'La 2NF', 'La 3NF', 'Aucune, c’est correct'],
+    bonneReponse: 0,
+    explication:
+      'La 1NF exige des valeurs atomiques : une seule valeur par cellule. Avec une liste, on ne peut ni filtrer (WHERE competence = \'SQL\' échoue), ni indexer, ni compter proprement. La solution est une table de liaison avec une ligne par compétence.',
+  },
+  {
+    id: 'concep-031',
+    theme: 'conception',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'Table `SalarieCompetence (#idSalarie, #idCompetence, niveau, nomSalarie)`. Quelle forme normale est violée, et pourquoi ?',
+    options: [
+      'La 2NF : `nomSalarie` ne dépend que d’une partie de la clé composite',
+      'La 1NF : la clé est composite',
+      'La 3NF : `nomSalarie` dépend d’une autre colonne non-clé',
+      'Aucune : la table est bien en 3NF',
+    ],
+    bonneReponse: 0,
+    explication:
+      'C’est une dépendance partielle : `nomSalarie` dépend d’`idSalarie` seul, pas du couple. Résultat, le nom est dupliqué sur chaque compétence du salarié. La 2NF ne concerne que les tables à clé composite — avec une clé simple, elle est acquise d’office.',
+  },
+  {
+    id: 'concep-032',
+    theme: 'conception',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'Table `Salarie (idSalarie, nom, idService, nomService)`. Quelle forme normale est violée ?',
+    options: [
+      'La 3NF : `nomService` dépend d’`idService`, qui n’est pas la clé primaire',
+      'La 1NF : il y a trop de colonnes',
+      'La 2NF : la clé n’est pas composite',
+      'Aucune : les clés étrangères sont autorisées',
+    ],
+    bonneReponse: 0,
+    explication:
+      'C’est une dépendance transitive : idSalarie → idService → nomService. Conséquence concrète, renommer un service oblige à modifier toutes les lignes de salariés de ce service, et en oublier une crée une incohérence. La solution est une table `Service` séparée.',
+  },
+  {
+    id: 'concep-033',
+    theme: 'conception',
+    type: 'remettre_ordre',
+    difficulte: 1,
+    enonce: 'Remettez dans l’ordre les étapes de la modélisation des données.',
+    elements: [
+      'Dictionnaire de données (inventaire des informations)',
+      'MCD (entités, associations, cardinalités)',
+      'Normalisation (1NF, 2NF, 3NF)',
+      'MLD (tables, clés primaires et étrangères)',
+      'MPD (script SQL du SGBD cible)',
     ],
     explication:
-      'ACID garantit la fiabilité des bases de données relationnelles. L\'atomicité est cruciale pour les opérations liées (déduire un solde ET créer la demande : si l\'un échoue, on ROLLBACK tout). La durabilité repose sur les journaux de transaction (WAL).',
+      'On va du plus conceptuel au plus physique. La normalisation sert à vérifier le modèle avant de le traduire en tables : un MCD bien construit produit naturellement un schéma en 3NF.',
+  },
+  {
+    id: 'concep-034',
+    theme: 'conception',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque forme normale à la règle qu’elle impose.',
+    paires: [
+      { gauche: '1NF', droite: 'Chaque cellule contient une valeur atomique' },
+      { gauche: '2NF', droite: 'Chaque colonne dépend de la clé entière, pas d’une partie' },
+      { gauche: '3NF', droite: 'Aucune colonne non-clé ne dépend d’une autre colonne non-clé' },
+    ],
+    explication:
+      'La formule mnémotechnique : « toute colonne dépend de la clé, de toute la clé, et de rien que la clé ». La 2NF traite les dépendances partielles, la 3NF les dépendances transitives.',
+  },
+  {
+    id: 'concep-035',
+    theme: 'conception',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce: 'Dénormaliser une base est une erreur de conception qu’il faut systématiquement corriger.',
+    bonneReponse: false,
+    explication:
+      'Dénormaliser est un compromis assumé : on réintroduit de la redondance pour accélérer les lectures, au prix d’une mise à jour plus complexe. Ce qui est fautif, c’est de le faire par défaut ou par ignorance. On dénormalise après avoir mesuré un vrai problème de performance, et on documente la raison.',
+  },
+  {
+    id: 'concep-036',
+    theme: 'conception',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque anomalie d’une table non normalisée à sa manifestation.',
+    paires: [
+      { gauche: 'Anomalie d’insertion', droite: 'Impossible d’enregistrer un service sans salarié rattaché' },
+      { gauche: 'Anomalie de mise à jour', droite: 'Renommer un service oblige à modifier de nombreuses lignes' },
+      { gauche: 'Anomalie de suppression', droite: 'Supprimer le dernier salarié fait disparaître le service' },
+    ],
+    explication:
+      'Ces trois anomalies sont la justification concrète de la normalisation : elles viennent toutes du fait que la même information est stockée à plusieurs endroits, ou qu’elle n’a nulle part où exister seule.',
+  },
+  // --- Diagrammes UML dynamiques ---
+  {
+    id: 'concep-037',
+    theme: 'conception',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'Quel diagramme UML utiliser pour décrire les états successifs d’une demande de congé (en attente, validée, refusée, annulée) et les transitions autorisées ?',
+    options: [
+      'Le diagramme d’états-transitions',
+      'Le diagramme de classes',
+      'Le diagramme de cas d’utilisation',
+      'Le diagramme de composants',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Le diagramme d’états-transitions décrit le cycle de vie d’UN objet : ses états et les événements qui le font changer. Dès qu’une entité porte une colonne `statut`, c’est le bon outil — et il se traduit directement en tests unitaires du Service.',
+  },
+  {
+    id: 'concep-038',
+    theme: 'conception',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Quelle est la différence entre un diagramme de séquence et un diagramme d’activité ?',
+    options: [
+      'La séquence montre qui appelle qui entre objets techniques ; l’activité montre l’enchaînement du processus métier',
+      'La séquence est statique, l’activité est dynamique',
+      'La séquence sert au front-end, l’activité au back-end',
+      'Ils sont équivalents, seule la notation change',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Les deux sont dynamiques, mais pas au même niveau : la séquence parle au développeur (Controller, Service, Repository, avec les messages échangés), l’activité parle au client (les étapes du processus, les décisions, les acteurs en couloirs).',
+  },
+  {
+    id: 'concep-039',
+    theme: 'conception',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque symbole du diagramme d’activité à son rôle.',
+    paires: [
+      { gauche: 'Losange', droite: 'Décision conditionnelle, avec une garde sur chaque branche' },
+      { gauche: 'Barre épaisse', droite: 'Fourche ou jointure de branches parallèles' },
+      { gauche: 'Rectangle arrondi', droite: 'Une action, une étape du processus' },
+      { gauche: 'Couloir (swimlane)', droite: 'Indique qui exécute quelle étape' },
+    ],
+    explication:
+      'Les couloirs sont ce qui distingue un diagramme d’activité d’un simple organigramme : ils rendent visible la répartition des responsabilités entre le salarié, le système et le manager.',
+  },
+  {
+    id: 'concep-040',
+    theme: 'conception',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Classez chaque diagramme UML dans sa famille.',
+    paires: [
+      { gauche: 'Diagramme de classes', droite: 'Statique — la structure' },
+      { gauche: 'Diagramme de déploiement', droite: 'Statique — les machines et artefacts' },
+      { gauche: 'Diagramme de séquence', droite: 'Dynamique — les messages dans le temps' },
+      { gauche: 'Diagramme d’états-transitions', droite: 'Dynamique — le cycle de vie d’un objet' },
+    ],
+    explication:
+      'Statique = ce qui existe indépendamment du temps ; dynamique = ce qui se passe. Le diagramme de déploiement, souvent oublié, est celui qu’on attend dans un dossier de projet pour expliquer l’architecture de production.',
+  },
+  {
+    id: 'concep-041',
+    theme: 'conception',
+    type: 'qcm',
+    difficulte: 3,
+    enonce:
+      'Sur un diagramme d’états-transitions, la transition depuis VALIDEE porte l’étiquette `annuler() [dateDebut > aujourd’hui] / recréditer le solde`. Que signifie la partie entre crochets ?',
+    options: [
+      'Une garde : la transition n’a lieu que si la condition est vraie',
+      'Une action exécutée pendant la transition',
+      'Le nom de l’état d’arrivée',
+      'Un commentaire sans effet',
+    ],
+    bonneReponse: 0,
+    explication:
+      'La syntaxe d’une transition est `événement [garde] / action`. Ici : l’événement est l’annulation, la garde impose que le congé n’ait pas commencé, et l’action recrédite le solde. Chacun de ces trois éléments devient une règle testable dans le code.',
+  },
+  // --- Règles de gestion ---
+  {
+    id: 'concep-042',
+    theme: 'conception',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Qu’est-ce qu’une règle de gestion ?',
+    options: [
+      'Une contrainte du métier exprimée en une phrase, indépendante de toute technique',
+      'Une règle de nommage des variables dans le code',
+      'Une consigne de l’équipe sur la façon de gérer les branches Git',
+      'Un critère de performance imposé par le client',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Les règles de gestion sont le maillon entre le cahier des charges et le modèle : chacune finit en contrainte SQL, en test dans la couche métier, ou dans les deux. On les repère aux verbes « doit », « ne peut pas », « seulement si », « au maximum ».',
+  },
+  {
+    id: 'concep-043',
+    theme: 'conception',
+    type: 'association',
+    difficulte: 3,
+    enonce: 'Associez chaque règle de gestion à l’endroit où elle se traduit le plus naturellement.',
+    paires: [
+      { gauche: 'Un salarié appartient à un seul service', droite: 'Cardinalité du MCD puis clé étrangère' },
+      { gauche: 'La date de fin est postérieure à la date de début', droite: 'Contrainte CHECK en base' },
+      { gauche: 'Une demande ne peut pas dépasser le solde disponible', droite: 'Règle métier dans le Service (elle demande un calcul)' },
+      { gauche: 'Seul le manager du service peut valider', droite: 'Contrôle d’autorisation côté serveur' },
+    ],
+    explication:
+      'Le réflexe qui compte : pour chaque règle, se demander OÙ on la fait respecter. Posée uniquement dans l’interface, elle est contournable en trois secondes ; posée uniquement en base, elle donne un message d’erreur incompréhensible. Souvent la bonne réponse est les deux.',
+  },
+  {
+    id: 'concep-044',
+    theme: 'conception',
+    type: 'vrai_faux',
+    difficulte: 1,
+    enonce: 'Une règle de gestion doit mentionner la technologie utilisée pour l’implémenter.',
+    bonneReponse: false,
+    explication:
+      'Une règle de gestion est une contrainte du métier, formulée dans les mots du client : « un salarié ne peut pas déposer une demande dépassant son solde ». Sa traduction technique vient ensuite, et peut changer sans que la règle change.',
+  },
+  // --- Éco-conception ---
+  {
+    id: 'concep-045',
+    theme: 'conception',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'En éco-conception numérique, quel levier a le plus d’impact ?',
+    options: [
+      'Supprimer les fonctionnalités et les écrans inutilisés',
+      'Compresser les images en WebP',
+      'Réduire le nombre de polices de caractères',
+      'Activer la mise en cache du navigateur',
+    ],
+    bonneReponse: 0,
+    explication:
+      'La page la plus économe est celle qui n’existe pas. Les optimisations techniques (images, polices, cache) sont utiles, mais elles agissent en aval : une fonctionnalité que personne n’utilise coûte de la bande passante, du stockage et de la maintenance à chaque visite.',
+  },
+  {
+    id: 'concep-046',
+    theme: 'conception',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce: 'L’éco-conception et le RGPD se rejoignent sur le principe de minimisation des données.',
+    bonneReponse: true,
+    explication:
+      'Ne collecter que le strictement nécessaire est à la fois une obligation légale (article 5 du RGPD) et un geste de sobriété : moins de stockage, des sauvegardes plus légères, et une surface de risque réduite en cas de fuite. L’accessibilité converge aussi — une page sobre en HTML sémantique est plus lisible pour un lecteur d’écran.',
   },
 ];

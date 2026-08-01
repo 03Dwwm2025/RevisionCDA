@@ -217,7 +217,7 @@ public class Manager : Employe
     public ___2___ string Saluer()
         => $"{___3___.Saluer()} Je manage {Service}.";
 }`,
-    choix: ['base', 'this', 'super', 'override', 'virtual', 'new', 'base', 'this'],
+    choix: ['base', 'this', 'super', 'override', 'virtual', 'new'],
     bonnesReponses: ['base', 'override', 'base'],
     explication:
       '`base(nom)` transmet l\'argument au constructeur parent. `override` redéfinit la méthode `virtual`. `base.Saluer()` appelle la version parent pour réutiliser son message au lieu de le dupliquer.',
@@ -255,5 +255,164 @@ public class Manager : Employe
     ],
     explication:
       'C\'est le cœur du polymorphisme : même référence de type parent (`Employe e`), comportement adapté selon l\'objet réel (`Manager`, `Stagiaire`…). L\'`override` est le mécanisme de liaison tardive.',
+  },
+  // --- Composition et héritage ---
+  {
+    id: 'poo-016',
+    theme: 'poo',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Quel test simple permet de décider entre héritage et composition ?',
+    options: [
+      'La phrase « un X est un Y » doit être vraie sans effort ; sinon c’est « un X a un Y », donc de la composition',
+      'Si la classe a plus de cinq méthodes, on utilise l’héritage',
+      'On utilise l’héritage quand les deux classes sont dans le même fichier',
+      'La composition ne s’utilise que pour les interfaces',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Un Manager EST UN Salarie : l’héritage se justifie. Un ServiceConges A UN journal : c’est de la composition. La règle de métier est de préférer la composition — le lien est plus faible, remplaçable à l’exécution, et n’impose pas d’hériter de toute l’interface publique du parent.',
+  },
+  {
+    id: 'poo-017',
+    theme: 'poo',
+    type: 'qcm',
+    difficulte: 3,
+    enonce: 'Une sous-classe redéfinit une méthode héritée uniquement pour lever une exception « opération non supportée ». Que révèle ce symptôme ?',
+    options: [
+      'Une violation du principe de substitution de Liskov : la sous-classe ne peut pas remplacer son parent',
+      'Un manque de tests unitaires sur la classe parente',
+      'Une mauvaise gestion des exceptions',
+      'Un besoin d’ajouter un constructeur par défaut',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Si un code qui manipule le parent casse lorsqu’on lui passe l’enfant, la hiérarchie est mal posée. C’est le signal qu’il fallait de la composition, ou une interface plus fine (principe de ségrégation des interfaces).',
+  },
+  {
+    id: 'poo-018',
+    theme: 'poo',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce: 'Une hiérarchie d’héritage de cinq niveaux est un signe de bonne conception objet.',
+    bonneReponse: false,
+    explication:
+      'Au-delà de deux ou trois niveaux, plus personne ne sait d’où vient un comportement, et une modification dans une classe haute casse des enfants qu’on n’avait pas en tête. Une hiérarchie profonde est un symptôme classique d’héritage utilisé pour réutiliser du code plutôt que pour exprimer un « est un ».',
+  },
+  // --- Types valeur et référence ---
+  {
+    id: 'poo-019',
+    theme: 'poo',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'En C#, que vaut `a` après ce code : `int a = 5; int b = a; b = 10;` ?',
+    options: ['5', '10', '15', 'null'],
+    bonneReponse: 0,
+    explication:
+      '`int` est un type valeur : l’affectation copie la valeur, les deux variables sont indépendantes. Avec un type référence (une classe), l’affectation copie l’adresse : les deux variables désignent le même objet, et modifier l’un modifie l’autre.',
+  },
+  {
+    id: 'poo-020',
+    theme: 'poo',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Classez chaque type C# dans sa famille.',
+    paires: [
+      { gauche: 'int, bool, DateOnly, decimal', droite: 'Types valeur' },
+      { gauche: 'struct et enum', droite: 'Types valeur également' },
+      { gauche: 'class, tableaux, List<T>', droite: 'Types référence' },
+      { gauche: 'string', droite: 'Type référence, mais immuable' },
+    ],
+    explication:
+      '`string` est le piège classique : c’est un type référence, mais son immuabilité lui donne l’apparence d’un type valeur. Toute « modification » crée en réalité une nouvelle chaîne — c’est pourquoi concaténer dans une boucle est coûteux et qu’on préfère StringBuilder.',
+  },
+  {
+    id: 'poo-021',
+    theme: 'poo',
+    type: 'qcm',
+    difficulte: 3,
+    enonce: 'Une méthode `void Renommer(Salarie s) => s.Nom = "Modifié";` modifie-t-elle l’objet de l’appelant ?',
+    options: [
+      'Oui : `Salarie` est un type référence, la méthode reçoit l’adresse de l’objet',
+      'Non : les paramètres sont toujours copiés en C#',
+      'Oui, mais uniquement si le paramètre est marqué `ref`',
+      'Non, sauf si la classe est marquée `static`',
+    ],
+    bonneReponse: 0,
+    explication:
+      'La référence est copiée, mais elle désigne le même objet : modifier une propriété est visible chez l’appelant. En revanche, réaffecter le paramètre lui-même (`s = new Salarie()`) n’a aucun effet à l’extérieur — c’est là qu’intervient le mot-clé `ref`.',
+  },
+  {
+    id: 'poo-022',
+    theme: 'poo',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Pourquoi remplacer `string Statut` par un `enum StatutDemande` dans une entité ?',
+    options: [
+      'Parce que l’ensemble des valeurs devient fermé et vérifié par le compilateur : plus de faute de frappe possible',
+      'Parce qu’un enum occupe moins de place en base de données',
+      'Parce que les chaînes de caractères sont dépréciées en C#',
+      'Parce que cela accélère les requêtes SQL',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Avec une chaîne libre, `"VALIDEE"`, `"Validee"` et `"VALIDÉE"` sont trois valeurs différentes et le bug ne se voit qu’à l’exécution. L’enum supprime toute une famille d’erreurs et permet au compilateur de vérifier l’exhaustivité des `switch`.',
+  },
+  {
+    id: 'poo-023',
+    theme: 'poo',
+    type: 'vrai_faux',
+    difficulte: 3,
+    enonce: 'Deux `record` C# contenant les mêmes valeurs sont considérés comme égaux avec l’opérateur `==`.',
+    bonneReponse: true,
+    explication:
+      'Le `record` est fait pour porter des données : il génère une comparaison par valeur, contrairement à une `class` classique qui compare les références. C’est ce qui en fait un excellent choix pour les DTO et les objets de valeur du métier.',
+  },
+  {
+    id: 'poo-024',
+    theme: 'poo',
+    type: 'completer_code',
+    difficulte: 2,
+    enonce: 'Complétez ce code : un ensemble fermé de statuts et un objet de transport immuable.',
+    codeAvecTrous: `// Ensemble fermé de valeurs nommées
+public ___1___ StatutDemande { EnAttente, Validee, Refusee, Annulee }
+
+// Objet de données immuable, comparé par valeur
+public ___2___ DemandeDto(DateOnly DateDebut, DateOnly DateFin);`,
+    choix: ['enum', 'record', 'class', 'struct', 'interface'],
+    bonnesReponses: ['enum', 'record'],
+    explication:
+      'L’`enum` ferme l’ensemble des valeurs possibles ; le `record` déclaré en une ligne génère le constructeur, les propriétés en lecture seule, l’égalité par valeur et un affichage lisible. Les deux réduisent la quantité de code à écrire et à tester.',
+  },
+  {
+    id: 'poo-025',
+    theme: 'poo',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Pourquoi éviter de concaténer des chaînes dans une boucle de plusieurs milliers d’itérations ?',
+    options: [
+      'Parce que `string` est immuable : chaque concaténation crée une nouvelle chaîne et recopie tout le contenu',
+      'Parce que le compilateur refuse les concaténations dans une boucle',
+      'Parce que la taille maximale d’une chaîne est de 1000 caractères',
+      'Parce que la concaténation est interdite sur les types référence',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Chaque tour de boucle alloue une nouvelle chaîne et recopie l’ancienne : le coût croît de façon quadratique. `StringBuilder` conserve un tampon modifiable et évite ces copies. Sur quelques concaténations, la différence est négligeable — c’est le volume qui fait le problème.',
+  },
+  {
+    id: 'poo-026',
+    theme: 'poo',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque relation à sa nature.',
+    paires: [
+      { gauche: 'Un Manager et un Salarie', droite: 'Héritage — « est un »' },
+      { gauche: 'Un ServiceConges et un journal', droite: 'Composition — « a un »' },
+      { gauche: 'Un ServiceConges et un IDemandeRepository', droite: 'Composition par injection de dépendance' },
+      { gauche: 'Une Commande et ses LigneCommande', droite: 'Composition forte — les parties disparaissent avec le tout' },
+    ],
+    explication:
+      'La composition par injection est ce qui rend le Service testable : on lui passe un faux dépôt en test, sans qu’il sache que ce n’est pas le vrai. C’est le bénéfice concret du principe d’inversion des dépendances.',
   },
 ];

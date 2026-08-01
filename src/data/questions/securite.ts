@@ -150,4 +150,243 @@ if (!estValide)
     explication:
       'Privacy by Design signifie intégrer la protection des données dès la conception, pas en rajout après. L\'ordre : identifier → minimiser → planifier l\'effacement → contrôler les accès → documenter. Chaque donnée inutile collectée est un risque et une responsabilité légale.',
   },
+  // --- XSS ---
+  {
+    id: 'secu-011',
+    theme: 'securite',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque type de XSS à l’endroit où vit la charge malveillante.',
+    paires: [
+      { gauche: 'XSS stocké', droite: 'En base de données, servi à tous les visiteurs' },
+      { gauche: 'XSS réfléchi', droite: 'Dans l’URL, renvoyé tel quel dans la réponse' },
+      { gauche: 'XSS DOM', droite: 'Uniquement côté client, sans passer par le serveur' },
+    ],
+    explication:
+      'Le XSS stocké est le plus grave : la charge touche chaque lecteur, sans action de sa part. Le réfléchi demande de piéger la victime avec un lien. Le XSS DOM ne laisse aucune trace côté serveur, ce qui le rend difficile à détecter dans les journaux.',
+  },
+  {
+    id: 'secu-012',
+    theme: 'securite',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Quelle est la protection principale contre le XSS ?',
+    options: [
+      'Échapper les données à l’affichage : utiliser `textContent` plutôt qu’`innerHTML`',
+      'Chiffrer la base de données',
+      'Utiliser HTTPS sur toutes les pages',
+      'Interdire les caractères accentués dans les formulaires',
+    ],
+    bonneReponse: 0,
+    explication:
+      'La faille naît au moment où une donnée est interprétée comme du code par le navigateur. L’échappement en sortie est donc la défense de première ligne. La validation en entrée et la Content-Security-Policy sont les deuxième et troisième lignes — utiles, mais insuffisantes seules.',
+  },
+  {
+    id: 'secu-013',
+    theme: 'securite',
+    type: 'completer_code',
+    difficulte: 2,
+    enonce: 'Complétez ce code JavaScript pour afficher sans risque un motif saisi par un utilisateur.',
+    codeAvecTrous: `// Vulnérable : le navigateur interprète le contenu comme du HTML
+zone.___1___ = demande.motif;
+
+// Protégé : le contenu est traité comme du texte
+zone.___2___ = demande.motif;`,
+    choix: ['innerHTML', 'textContent', 'outerHTML', 'value', 'innerText'],
+    bonnesReponses: ['innerHTML', 'textContent'],
+    explication:
+      '`innerHTML` analyse la chaîne comme du HTML : une balise `<img src=x onerror="...">` déclenche l’exécution du script. `textContent` insère la chaîne telle quelle, en échappant automatiquement les caractères spéciaux.',
+  },
+  {
+    id: 'secu-014',
+    theme: 'securite',
+    type: 'qcm',
+    difficulte: 3,
+    enonce: 'Dans quelle catégorie de l’OWASP Top 10 2021 le XSS est-il classé ?',
+    options: [
+      'A03 — Injection, avec l’injection SQL',
+      'A01 — Broken Access Control',
+      'A07 — Identification and Authentication Failures',
+      'Il a sa propre catégorie, A11',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Depuis la révision 2021, le XSS est fusionné dans A03 Injection. La logique est la même que pour l’injection SQL : une donnée non maîtrisée est interprétée comme du code, seul l’interpréteur change — le moteur SQL d’un côté, le navigateur de l’autre.',
+  },
+  {
+    id: 'secu-015',
+    theme: 'securite',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'À quoi sert l’en-tête `Content-Security-Policy` ?',
+    options: [
+      'À indiquer au navigateur quelles sources de scripts il a le droit d’exécuter',
+      'À chiffrer les échanges entre le client et le serveur',
+      'À empêcher le vol de cookies par le réseau',
+      'À vérifier l’identité de l’utilisateur',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Une politique comme `script-src \'self\'` interdit l’exécution de tout script en ligne ou provenant d’un autre domaine. C’est le filet de sécurité : même si un XSS passe l’échappement, le navigateur refuse d’exécuter la charge injectée.',
+  },
+  // --- CSRF ---
+  {
+    id: 'secu-016',
+    theme: 'securite',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Quel est le mécanisme d’une attaque CSRF ?',
+    options: [
+      'Un site tiers déclenche une requête vers votre application, et le navigateur y joint automatiquement le cookie de session',
+      'L’attaquant vole le cookie de session en lisant le stockage du navigateur',
+      'L’attaquant injecte du JavaScript dans une page de votre site',
+      'L’attaquant intercepte les requêtes sur le réseau Wi-Fi',
+    ],
+    bonneReponse: 0,
+    explication:
+      'L’attaquant n’a pas accès au cookie — il n’en a pas besoin. Il profite du fait que le navigateur attache automatiquement les cookies à toute requête vers le domaine concerné. Côté serveur, la requête paraît parfaitement authentifiée.',
+  },
+  {
+    id: 'secu-017',
+    theme: 'securite',
+    type: 'association',
+    difficulte: 3,
+    enonce: 'Associez chaque caractéristique à l’attaque correspondante.',
+    paires: [
+      { gauche: 'On trompe le navigateur de la victime', droite: 'XSS' },
+      { gauche: 'On trompe le serveur', droite: 'CSRF' },
+      { gauche: 'La défense principale est l’échappement en sortie', droite: 'XSS — protection' },
+      { gauche: 'La défense principale est le jeton anti-CSRF et SameSite', droite: 'CSRF — protection' },
+    ],
+    explication:
+      'XSS : du code de l’attaquant s’exécute sur votre site. CSRF : une requête légitime est déclenchée à l’insu de la victime. Un XSS réussi contourne d’ailleurs les protections CSRF, puisque le code s’exécute sur le site et peut lire le jeton anti-CSRF.',
+  },
+  {
+    id: 'secu-018',
+    theme: 'securite',
+    type: 'vrai_faux',
+    difficulte: 3,
+    enonce: 'Un cookie `HttpOnly` protège contre les attaques CSRF.',
+    bonneReponse: false,
+    explication:
+      '`HttpOnly` empêche JavaScript de LIRE le cookie, ce qui protège contre le vol par XSS. Mais le navigateur continue de l’ENVOYER automatiquement : l’attaque CSRF fonctionne toujours. Les bonnes parades sont l’attribut `SameSite` et le jeton anti-CSRF.',
+  },
+  {
+    id: 'secu-019',
+    theme: 'securite',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Pourquoi une API qui authentifie par en-tête `Authorization: Bearer` est-elle peu exposée au CSRF ?',
+    options: [
+      'Parce que le navigateur n’ajoute pas automatiquement cet en-tête sur une requête venue d’un autre site',
+      'Parce que les jetons JWT sont chiffrés',
+      'Parce que les API REST ne acceptent pas les requêtes POST inter-sites',
+      'Parce que CORS bloque toutes les requêtes externes',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Le CSRF repose sur l’envoi automatique des identifiants par le navigateur, ce qui ne vaut que pour les cookies. Un en-tête doit être posé explicitement par du code, et la politique de même origine empêche un site tiers de lire le jeton pour le poser.',
+  },
+  {
+    id: 'secu-020',
+    theme: 'securite',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Que fait l’attribut `SameSite=Strict` sur un cookie ?',
+    options: [
+      'Il empêche le navigateur d’envoyer le cookie sur une requête initiée depuis un autre site',
+      'Il chiffre le contenu du cookie',
+      'Il limite la durée de vie du cookie à la session',
+      'Il empêche JavaScript de lire le cookie',
+    ],
+    bonneReponse: 0,
+    explication:
+      'C’est la parade native au CSRF. `Strict` bloque tout envoi inter-sites, y compris quand l’utilisateur clique sur un lien légitime venu d’ailleurs ; `Lax` autorise ce cas de navigation, ce qui en fait le compromis courant. Empêcher la lecture par JavaScript, c’est le rôle de `HttpOnly`.',
+  },
+  // --- Chiffrement, hachage, encodage ---
+  {
+    id: 'secu-021',
+    theme: 'securite',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque opération à sa caractéristique.',
+    paires: [
+      { gauche: 'Encodage (base64)', droite: 'Réversible sans clé — aucune sécurité' },
+      { gauche: 'Chiffrement (AES, RSA)', droite: 'Réversible avec la clé' },
+      { gauche: 'Hachage (bcrypt, Argon2)', droite: 'Non réversible, par conception' },
+    ],
+    explication:
+      'Confusion très fréquente. Le payload d’un JWT est encodé en base64, donc lisible par n’importe qui : la signature garantit son intégrité, pas sa confidentialité. Un mot de passe se hache, il ne se chiffre pas — un chiffrement réversible signifie qu’une clé volée expose tous les comptes.',
+  },
+  {
+    id: 'secu-022',
+    theme: 'securite',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Pourquoi bcrypt et Argon2 sont-ils préférés à SHA-256 pour stocker un mot de passe ?',
+    options: [
+      'Parce qu’ils sont lents par conception et intègrent un sel, ce qui rend l’attaque par force brute coûteuse',
+      'Parce qu’ils produisent une empreinte plus longue',
+      'Parce qu’ils sont réversibles en cas d’oubli du mot de passe',
+      'Parce qu’ils sont plus rapides, donc plus économes en ressources',
+    ],
+    bonneReponse: 0,
+    explication:
+      'La vitesse est un défaut pour un hachage de mot de passe : SHA-256 permet des milliards d’essais par seconde sur du matériel spécialisé. bcrypt et Argon2 sont volontairement coûteux en temps et en mémoire, et leur facteur de coût s’ajuste à mesure que le matériel progresse.',
+  },
+  {
+    id: 'secu-023',
+    theme: 'securite',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque type de chiffrement à sa caractéristique.',
+    paires: [
+      { gauche: 'Symétrique (AES)', droite: 'Une seule clé partagée, rapide, adapté aux gros volumes' },
+      { gauche: 'Asymétrique (RSA)', droite: 'Une paire clé publique / clé privée, lent, sert à échanger un secret ou à signer' },
+    ],
+    explication:
+      'HTTPS combine les deux : la poignée de main TLS utilise l’asymétrique pour authentifier le serveur et convenir d’une clé de session, puis toute la conversation est chiffrée en symétrique parce que c’est bien plus rapide.',
+  },
+  {
+    id: 'secu-024',
+    theme: 'securite',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce: 'Le contenu d’un jeton JWT est chiffré : un attaquant qui l’intercepte ne peut pas le lire.',
+    bonneReponse: false,
+    explication:
+      'Le payload est simplement encodé en base64 : n’importe qui peut le décoder et lire le rôle, l’identifiant et la date d’expiration. La signature empêche de le MODIFIER sans être détecté, mais ne le rend pas secret. On n’y met donc aucune donnée sensible.',
+  },
+  {
+    id: 'secu-025',
+    theme: 'securite',
+    type: 'qcm',
+    difficulte: 3,
+    enonce: 'Quel est le rôle d’un certificat TLS délivré par une autorité comme Let’s Encrypt ?',
+    options: [
+      'Attester que la clé publique présentée appartient bien au domaine visité',
+      'Chiffrer le contenu de la base de données du serveur',
+      'Stocker les mots de passe des utilisateurs de façon sécurisée',
+      'Empêcher les attaques par déni de service',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Sans certificat signé, rien ne prouve qu’on parle au bon serveur : un intercepteur pourrait présenter sa propre clé publique. Le navigateur fait confiance à l’autorité de certification, donc au certificat, donc au serveur — c’est la chaîne de confiance.',
+  },
+  {
+    id: 'secu-026',
+    theme: 'securite',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'À quoi sert le sel (salt) ajouté au hachage d’un mot de passe ?',
+    options: [
+      'À rendre l’empreinte différente pour deux utilisateurs ayant le même mot de passe, ce qui casse les tables précalculées',
+      'À raccourcir l’empreinte stockée en base',
+      'À permettre de retrouver le mot de passe original',
+      'À chiffrer l’empreinte une seconde fois',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Sans sel, deux comptes avec le même mot de passe ont la même empreinte, et une table arc-en-ciel précalculée les casse d’un coup. Le sel, unique par utilisateur, rend chaque empreinte unique et oblige à attaquer les comptes un par un. bcrypt et Argon2 gèrent le sel automatiquement.',
+  },
 ];

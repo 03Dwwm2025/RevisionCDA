@@ -116,4 +116,94 @@ export const questionsSupervision: Question[] = [
     explication:
       'PRA (Disaster Recovery Plan) : on accepte une interruption et on définit comment reconstruire le service (RTO = combien de temps, RPO = combien de données perdues). PCA (Business Continuity Plan) : on maintient un service dégradé mais continu grâce à la redondance (multi-zone, failover). PCA > PRA en termes de disponibilité, mais plus coûteux.',
   },
+  {
+    id: 'super-009',
+    theme: 'supervision',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque type de maintenance à son déclencheur.',
+    paires: [
+      { gauche: 'Corrective', droite: 'Un défaut constaté en production' },
+      { gauche: 'Évolutive', droite: 'Un nouveau besoin métier' },
+      { gauche: 'Adaptative', droite: 'Un changement dans l’environnement technique ou légal' },
+      { gauche: 'Préventive', droite: 'Anticiper une panne avant qu’elle survienne' },
+    ],
+    explication:
+      'L’évolutive représente en général la plus grosse part du budget de maintenance, loin devant la corrective. La préventive est la moins visible et la plus rentable : ajouter un index avant que la table ne ralentisse, purger les journaux avant saturation du disque.',
+  },
+  {
+    id: 'super-010',
+    theme: 'supervision',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Migrer une application de .NET 8 vers .NET 10 relève de quel type de maintenance ?',
+    options: [
+      'Adaptative',
+      'Corrective',
+      'Évolutive',
+      'Préventive',
+    ],
+    bonneReponse: 0,
+    explication:
+      'La maintenance adaptative répond à un changement de l’environnement — nouvelle version d’un cadriciel, nouveau système d’exploitation, nouvelle obligation réglementaire. Aucune fonctionnalité n’est ajoutée pour l’utilisateur, mais l’application reste supportée et sécurisée.',
+  },
+  {
+    id: 'super-011',
+    theme: 'supervision',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce: 'Sur la durée de vie d’une application, le développement initial coûte plus cher que la maintenance.',
+    bonneReponse: false,
+    explication:
+      'C’est l’inverse : la maintenance domine largement le coût total. C’est l’argument économique derrière le code propre, les tests et la documentation — ils ne servent pas à celui qui écrit, ils servent à celui qui maintient, souvent la même personne six mois plus tard.',
+  },
+  {
+    id: 'super-012',
+    theme: 'supervision',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Qu’est-ce que la dette technique ?',
+    options: [
+      'Le coût différé d’un raccourci pris volontairement pour livrer plus vite',
+      'Le montant des licences logicielles impayées',
+      'Le nombre de bugs ouverts dans le suivi',
+      'Le temps passé à écrire de la documentation',
+    ],
+    bonneReponse: 0,
+    explication:
+      'La dette n’est pas honteuse tant qu’elle est consciente et tracée : on note ce qu’on a bâclé et pourquoi. Elle devient dangereuse quand plus personne ne sait où elle est — les intérêts se paient alors sous forme de bugs et de lenteur à faire évoluer le code.',
+  },
+  {
+    id: 'super-013',
+    theme: 'supervision',
+    type: 'remettre_ordre',
+    difficulte: 2,
+    enonce: 'Remettez dans l’ordre les étapes de la réponse à un incident de production.',
+    elements: [
+      'Détecter (alerte, remontée utilisateur, pic d’erreurs)',
+      'Évaluer la sévérité et le nombre d’utilisateurs impactés',
+      'Mitiger : retour arrière ou coupure partielle',
+      'Diagnostiquer avec les journaux et les métriques',
+      'Corriger, tester et redéployer',
+      'Rédiger un post-mortem sans blâme',
+    ],
+    explication:
+      'La mitigation vient AVANT le diagnostic : on rétablit d’abord le service, on comprend ensuite. Chercher la cause racine pendant que les utilisateurs sont bloqués est l’erreur classique.',
+  },
+  {
+    id: 'super-014',
+    theme: 'supervision',
+    type: 'qcm',
+    difficulte: 3,
+    enonce: 'Que signifie un temps de réponse p95 de 500 ms ?',
+    options: [
+      '95 % des requêtes répondent en moins de 500 ms',
+      'La requête moyenne prend 500 ms dans 95 % des cas',
+      '5 % des requêtes prennent exactement 500 ms',
+      'Le serveur traite 95 requêtes de 500 ms par seconde',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Le percentile 95 est plus parlant que la moyenne : une moyenne de 100 ms peut cacher 5 % de requêtes à 8 secondes, qui sont précisément celles que les utilisateurs remarquent et qui font fuir. On surveille p95 et p99, pas la moyenne.',
+  },
 ];

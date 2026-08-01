@@ -162,4 +162,158 @@ public IActionResult Creer([FromBody] DemandeDto dto)
     explication:
       'Défense en profondeur : JWT identifie l\'appelant, la validation empêche les injections et données malformées, le rate limiting bloque le brute force et le DoS, CORS strict interdit les appels depuis des origines non autorisées. Chaque couche couvre ce que l\'autre ne couvre pas.',
   },
+  // --- Pagination, filtrage, versionnement ---
+  {
+    id: 'api-012',
+    theme: 'api-rest',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Pourquoi borner le paramètre `taille` d’une pagination côté serveur ?',
+    options: [
+      'Parce qu’un client peut demander `taille=1000000` et provoquer une saturation du serveur',
+      'Parce que les navigateurs limitent la longueur des URL',
+      'Parce que le protocole HTTP interdit les nombres au-delà de 1000',
+      'Parce que la base de données refuse les LIMIT trop grands',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Tout paramètre venu du client est une entrée à valider. Un `Math.Clamp(taille, 1, 100)` transforme une requête abusive en requête normale. C’est la même logique que la validation d’un formulaire, appliquée aux paramètres de requête.',
+  },
+  {
+    id: 'api-013',
+    theme: 'api-rest',
+    type: 'association',
+    difficulte: 3,
+    enonce: 'Associez chaque stratégie de pagination à sa caractéristique.',
+    paires: [
+      { gauche: 'Par décalage (page + taille)', droite: 'Simple, permet d’aller directement à la page N, mais lent sur de gros décalages' },
+      { gauche: 'Par curseur (après le dernier identifiant)', droite: 'Stable et rapide sur de gros volumes, mais avance seulement de proche en proche' },
+    ],
+    explication:
+      'La pagination par décalage souffre aussi d’un défaut fonctionnel : si une ligne est insérée pendant la navigation, tous les résultats se décalent et un élément peut apparaître deux fois ou être sauté. Le curseur n’a pas ce problème.',
+  },
+  {
+    id: 'api-014',
+    theme: 'api-rest',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Lequel de ces changements impose une nouvelle version majeure de l’API ?',
+    options: [
+      'Renommer un champ de la réponse JSON',
+      'Ajouter un champ optionnel dans la réponse',
+      'Ajouter un nouvel endpoint',
+      'Corriger un message d’erreur',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Renommer ou supprimer un champ, changer un type, rendre obligatoire un paramètre optionnel : tout cela casse les clients existants. Ajouter un champ ou un endpoint est rétrocompatible. C’est la logique de SemVer appliquée au contrat d’API.',
+  },
+  {
+    id: 'api-015',
+    theme: 'api-rest',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque façon de porter la version d’une API à sa forme.',
+    paires: [
+      { gauche: 'Dans l’URL', droite: '/api/v2/demandes' },
+      { gauche: 'Dans un en-tête dédié', droite: 'Api-Version: 2.0' },
+      { gauche: 'Dans le type de média', droite: 'Accept: application/vnd.congeapp.v2+json' },
+    ],
+    explication:
+      'La version dans l’URL est la plus répandue parce qu’elle est visible au débogage et testable dans un navigateur. La négociation par type de média est la plus conforme à l’esprit REST, et la plus rare en pratique.',
+  },
+  // --- Authentification ---
+  {
+    id: 'api-016',
+    theme: 'api-rest',
+    type: 'association',
+    difficulte: 3,
+    enonce: 'Associez chaque caractéristique au mode d’authentification correspondant.',
+    paires: [
+      { gauche: 'L’état vit sur le serveur', droite: 'Session + cookie' },
+      { gauche: 'L’état vit dans le jeton, chez le client', droite: 'JWT' },
+      { gauche: 'La déconnexion immédiate est simple', droite: 'Session + cookie — on supprime la session' },
+      { gauche: 'Chaque serveur vérifie seul, sans état partagé', droite: 'JWT — vérification de signature' },
+    ],
+    explication:
+      'Il n’y a pas de gagnant universel. La session convient à une application web servie par le même domaine ; le jeton convient à une API consommée par plusieurs clients. Le défaut du JWT est justement l’absence de révocation immédiate.',
+  },
+  {
+    id: 'api-017',
+    theme: 'api-rest',
+    type: 'qcm',
+    difficulte: 3,
+    enonce: 'À quoi sert le jeton de rafraîchissement à côté du jeton d’accès ?',
+    options: [
+      'À obtenir un nouveau jeton d’accès sans se reconnecter, tout en restant révocable côté serveur',
+      'À chiffrer le jeton d’accès pendant son transport',
+      'À stocker les droits de l’utilisateur',
+      'À accélérer la vérification de la signature',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Le jeton d’accès reste court (15 à 60 minutes) pour limiter la fenêtre en cas de vol. Le jeton de rafraîchissement, lui, est enregistré côté serveur : on peut le révoquer, ce qui rattrape le principal défaut du JWT. Il se stocke dans un cookie HttpOnly.',
+  },
+  {
+    id: 'api-018',
+    theme: 'api-rest',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Où stocker un jeton JWT côté navigateur, et pourquoi ?',
+    options: [
+      'Dans un cookie HttpOnly et Secure : JavaScript ne peut pas le lire, donc un XSS ne peut pas le voler',
+      'Dans le localStorage : c’est le plus simple à manipuler en JavaScript',
+      'Dans une variable globale JavaScript, effacée au rechargement',
+      'Dans l’URL, en paramètre de requête',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Le localStorage est lisible par n’importe quel script de la page : un XSS y récupère le jeton immédiatement. Le cookie HttpOnly ferme cette porte, mais réintroduit le risque CSRF — d’où l’attribut SameSite. Le jeton dans l’URL est le pire choix : il finit dans les journaux serveur et l’historique du navigateur.',
+  },
+  {
+    id: 'api-019',
+    theme: 'api-rest',
+    type: 'remettre_ordre',
+    difficulte: 2,
+    enonce: 'Remettez dans l’ordre le cycle d’authentification avec jeton d’accès et jeton de rafraîchissement.',
+    elements: [
+      'L’utilisateur envoie ses identifiants',
+      'Le serveur renvoie un jeton d’accès court et un jeton de rafraîchissement long',
+      'Le client joint le jeton d’accès à chaque requête',
+      'Le jeton d’accès expire',
+      'Le client demande un nouveau jeton avec son jeton de rafraîchissement',
+      'Le serveur vérifie que le jeton de rafraîchissement n’a pas été révoqué et renvoie un nouveau jeton d’accès',
+    ],
+    explication:
+      'La vérification en base du jeton de rafraîchissement est l’étape qui rend le système révocable : à la déconnexion ou en cas de vol détecté, on le supprime et plus aucun renouvellement n’est possible.',
+  },
+  {
+    id: 'api-020',
+    theme: 'api-rest',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce: 'Une API REST bien conçue renvoie la liste complète des ressources sur un GET de collection.',
+    bonneReponse: false,
+    explication:
+      'Une collection se pagine. Renvoyer 50 000 lignes sature le serveur, le réseau et le client, et le temps de réponse se dégrade au fil de la croissance des données. On renvoie une page, avec le total et le nombre de pages pour que le client puisse naviguer.',
+  },
+  {
+    id: 'api-021',
+    theme: 'api-rest',
+    type: 'completer_code',
+    difficulte: 2,
+    enonce: 'Complétez cette action paginée : borner la taille et renvoyer les métadonnées de pagination.',
+    codeAvecTrous: `[HttpGet]
+public IActionResult Lister([___1___] int page = 1, [___1___] int taille = 20)
+{
+    taille = Math.___2___(taille, 1, 100);
+    var (items, total) = _service.Lister(page, taille);
+
+    return ___3___(new { donnees = items, page, taille, total });
+}`,
+    choix: ['FromQuery', 'FromBody', 'FromRoute', 'Clamp', 'Max', 'Ok', 'Created', 'NoContent'],
+    bonnesReponses: ['FromQuery', 'Clamp', 'Ok'],
+    explication:
+      '`[FromQuery]` lie les paramètres de la chaîne de requête (?page=2&taille=20). `Math.Clamp` borne la valeur dans un intervalle. `Ok()` renvoie 200 avec le corps. Renvoyer le total permet au client de calculer le nombre de pages sans deviner.',
+  },
 ];

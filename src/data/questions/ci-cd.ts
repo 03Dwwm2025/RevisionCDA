@@ -129,4 +129,79 @@ jobs:
     explication:
       'Sans `needs`, GitHub Actions exécute les jobs en parallèle par défaut. Le déploiement pourrait s\'exécuter avant la fin des tests (ou même si les tests échouent). `needs` crée une dépendance explicite : `deploy` attend que `build-test` se termine avec succès.',
   },
+  {
+    id: 'cicd-009',
+    theme: 'ci-cd',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Quelle est la différence entre livraison continue et déploiement continu ?',
+    options: [
+      'En livraison continue, l’artefact est prêt à partir mais un humain déclenche la production ; en déploiement continu, tout est automatique',
+      'La livraison continue ne lance pas les tests',
+      'Le déploiement continu ne concerne que les environnements de test',
+      'Les deux termes désignent exactement la même pratique',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Les deux se disent « CD » en anglais, d’où la confusion. La livraison continue (Continuous Delivery) automatise tout jusqu’à la préproduction et garde une validation humaine ; le déploiement continu (Continuous Deployment) va jusqu’en production sans intervention. Le second suppose une confiance totale dans les tests.',
+  },
+  {
+    id: 'cicd-010',
+    theme: 'ci-cd',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Pourquoi chaque job d’un pipeline GitHub Actions doit-il refaire un `actions/checkout` ?',
+    options: [
+      'Parce que chaque job démarre sur un runner neuf, qui ne partage rien avec les autres',
+      'Parce que le code change entre deux jobs',
+      'Parce que le cache expire après chaque job',
+      'Parce que checkout met aussi à jour les dépendances',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Les jobs sont isolés : un job `deploy` qui suit un job `build-test` repart d’une machine vide. Le partage se fait explicitement, par des artefacts téléversés puis téléchargés, ou par un registre d’images.',
+  },
+  {
+    id: 'cicd-011',
+    theme: 'ci-cd',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce: 'Les secrets GitHub sont accessibles aux pipelines déclenchés par une pull request venant d’un dépôt forké.',
+    bonneReponse: false,
+    explication:
+      'GitHub ne transmet pas les secrets aux exécutions déclenchées depuis un fork, précisément pour éviter qu’une pull request malveillante ne les exfiltre. C’est aussi pour cela qu’on sépare le job de build (qui tourne sur les PR) du job de déploiement (réservé à la branche principale).',
+  },
+  {
+    id: 'cicd-012',
+    theme: 'ci-cd',
+    type: 'remettre_ordre',
+    difficulte: 2,
+    enonce: 'Remettez dans l’ordre les étapes d’un pipeline complet, du commit à la production.',
+    elements: [
+      'Récupérer le code source sur le runner',
+      'Installer les dépendances depuis le fichier de verrouillage',
+      'Lancer les tests automatisés',
+      'Analyser la sécurité (dépendances, code, image)',
+      'Construire l’image et la pousser avec un tag traçable',
+      'Déployer sur le serveur cible',
+    ],
+    explication:
+      'L’analyse de sécurité se place avant la construction de l’artefact final : détecter une faille en CI coûte bien moins cher qu’en production. Chaque étape est bloquante — si les tests échouent, rien n’est publié ni déployé.',
+  },
+  {
+    id: 'cicd-013',
+    theme: 'ci-cd',
+    type: 'qcm',
+    difficulte: 3,
+    enonce: 'Quel réglage de protection de branche empêche un compte développeur compromis de pousser du code malveillant en production ?',
+    options: [
+      'Exiger une pull request approuvée et une CI verte avant toute fusion dans la branche principale',
+      'Activer l’authentification à deux facteurs sur le compte du serveur',
+      'Chiffrer le dépôt Git',
+      'Interdire les commits en dehors des heures ouvrées',
+    ],
+    bonneReponse: 0,
+    explication:
+      'C’est la parade à OWASP A08, l’intégrité de la chaîne de livraison. Sans revue obligatoire, un seul compte compromis suffit à injecter du code jusqu’en production. Interdire aussi la poussée forcée empêche de réécrire l’historique pour masquer l’intrusion.',
+  },
 ];

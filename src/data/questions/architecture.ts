@@ -167,4 +167,176 @@ export const questionsArchitecture: Question[] = [
     explication:
       'Chaque couche doit rester dans son domaine. Un Controller qui fait du SQL est non testable. Un Service qui retourne des `IActionResult` est couplé à HTTP. Un Repository qui valide les règles métier les duplique. La Vue ne doit jamais être la seule ligne de défense.',
   },
+  // --- Patrons de conception ---
+  {
+    id: 'archi-012',
+    theme: 'architecture',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque patron de conception au problème qu’il résout.',
+    paires: [
+      { gauche: 'Singleton', droite: 'Garantir une seule instance pour toute l’application' },
+      { gauche: 'Factory', droite: 'Déléguer la création d’objets à une méthode dédiée' },
+      { gauche: 'Strategy', droite: 'Rendre un algorithme interchangeable à l’exécution' },
+      { gauche: 'Observer', droite: 'Notifier plusieurs abonnés qu’un événement s’est produit' },
+    ],
+    explication:
+      'Un patron n’est pas du code à copier : c’est un schéma d’organisation et surtout un vocabulaire commun. Dire « ici j’utilise un Repository » remplace un paragraphe d’explication en réunion de conception.',
+  },
+  {
+    id: 'archi-013',
+    theme: 'architecture',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Classez chaque patron dans sa famille.',
+    paires: [
+      { gauche: 'Création', droite: 'Singleton, Factory, Builder' },
+      { gauche: 'Structure', droite: 'Adapter, Decorator, Facade, Repository' },
+      { gauche: 'Comportement', droite: 'Strategy, Observer, Template Method' },
+    ],
+    explication:
+      'Les patrons de création répondent à « comment instancier », les patrons de structure à « comment assembler », les patrons de comportement à « comment faire collaborer ». Savoir citer la famille montre qu’on a compris la logique et pas seulement appris une liste.',
+  },
+  {
+    id: 'archi-014',
+    theme: 'architecture',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Quel patron le Repository met-il en œuvre dans une architecture en couches ?',
+    options: [
+      'Il isole l’accès aux données : le Service manipule une collection d’objets métier, sans connaître le SQL',
+      'Il garantit qu’une seule connexion à la base existe',
+      'Il transforme les objets métier en JSON',
+      'Il gère le cycle de vie des transactions',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Bénéfice concret : changer de SGBD, ou remplacer le vrai dépôt par un faux en test, sans toucher à la couche métier. C’est aussi ce qui rend les tests unitaires du Service possibles sans base de données.',
+  },
+  {
+    id: 'archi-015',
+    theme: 'architecture',
+    type: 'qcm',
+    difficulte: 3,
+    enonce: 'Pourquoi le patron Singleton demande-t-il de la prudence ?',
+    options: [
+      'Parce qu’il porte un état global partagé, qui doit être conçu pour l’accès concurrent',
+      'Parce qu’il est interdit en C#',
+      'Parce qu’il consomme beaucoup de mémoire',
+      'Parce qu’il empêche l’injection de dépendances',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Une seule instance servie à toute l’application signifie que plusieurs requêtes simultanées la partagent. En ASP.NET Core, `AddSingleton` doit donc être réservé à des objets sans état modifiable, ou protégés contre les accès concurrents. Pour le reste, `AddScoped` est le choix par défaut.',
+  },
+  {
+    id: 'archi-016',
+    theme: 'architecture',
+    type: 'completer_code',
+    difficulte: 2,
+    enonce: 'Complétez ce patron Factory : le constructeur est fermé, la création passe par des méthodes nommées.',
+    codeAvecTrous: `public class Resultat
+{
+    public bool   Succes  { get; private set; }
+    public string Message { get; private set; } = "";
+
+    ___1___ Resultat() { }   // constructeur inaccessible de l'extérieur
+
+    public ___2___ Resultat Ok()               => new() { Succes = true };
+    public ___3___ Resultat Erreur(string msg) => new() { Succes = false, Message = msg };
+}`,
+    choix: ['private', 'public', 'protected', 'static', 'abstract', 'virtual'],
+    bonnesReponses: ['private', 'static', 'static'],
+    explication:
+      'Le constructeur privé interdit `new Resultat(...)` de l’extérieur ; les méthodes statiques nommées deviennent le seul moyen de créer l’objet. `Resultat.Erreur("Solde insuffisant")` se lit mieux qu’un constructeur à paramètres booléens, et empêche de construire un objet incohérent.',
+  },
+  {
+    id: 'archi-017',
+    theme: 'architecture',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce: 'Plus une application utilise de patrons de conception, meilleure est son architecture.',
+    bonneReponse: false,
+    explication:
+      'Chaque patron ajoute une indirection, donc de la complexité. On l’introduit quand le problème qu’il résout se présente vraiment — rasoir d’Ockham. Une factory pour une classe instanciée à un seul endroit est du bruit, pas de la qualité.',
+  },
+  {
+    id: 'archi-018',
+    theme: 'architecture',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Quel patron permet d’ajouter un nouveau mode de calcul du solde sans modifier le Service existant ?',
+    options: [
+      'Strategy : le Service reçoit une interface de calcul et on en injecte une nouvelle implémentation',
+      'Singleton : on remplace l’instance unique par une autre',
+      'Observer : le Service s’abonne au nouveau calcul',
+      'Adapter : on convertit l’ancien calcul en nouveau',
+    ],
+    bonneReponse: 0,
+    explication:
+      'C’est l’application directe du principe ouvert/fermé (le O de SOLID) : le Service est ouvert à l’extension (nouvelle stratégie) mais fermé à la modification. Ajouter un calcul « cadre » ne touche pas une ligne du Service.',
+  },
+  // --- Monolithe et microservices ---
+  {
+    id: 'archi-019',
+    theme: 'architecture',
+    type: 'qcm',
+    difficulte: 3,
+    enonce: 'Quel problème les microservices résolvent-ils principalement ?',
+    options: [
+      'Un problème d’organisation : permettre à plusieurs équipes de livrer sans se bloquer',
+      'Un problème de performance : le réseau est plus rapide qu’un appel en mémoire',
+      'Un problème de sécurité : chaque service est isolé des attaques',
+      'Un problème de coût : plusieurs petits serveurs coûtent moins cher',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Le gain est humain avant d’être technique. Le prix à payer est lourd : appels réseau entre services, cohérence distribuée, supervision multipliée, déploiement plus complexe. Pour une petite équipe, le monolithe en couches reste le bon choix — et savoir l’expliquer vaut mieux que d’empiler des services.',
+  },
+  {
+    id: 'archi-020',
+    theme: 'architecture',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque style d’architecture à sa situation.',
+    paires: [
+      { gauche: 'Monolithe en couches', droite: 'La majorité des projets : simple à développer, déboguer et déployer' },
+      { gauche: 'Monolithe modulaire', droite: 'Un seul déploiement, mais des modules métier étanches' },
+      { gauche: 'Microservices', droite: 'Grosses équipes, besoins de montée en charge très différents par service' },
+    ],
+    explication:
+      'Le monolithe modulaire est souvent le bon compromis : il prépare une découpe éventuelle sans en payer le coût tout de suite. Choisir les microservices sans le problème d’organisation qui les justifie, c’est acheter la complexité sans le bénéfice.',
+  },
+  {
+    id: 'archi-021',
+    theme: 'architecture',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Dans une architecture 3-tiers, pourquoi la base de données n’est-elle jamais exposée sur Internet ?',
+    options: [
+      'Parce qu’elle ne doit être accessible que par le serveur applicatif, sur le réseau interne',
+      'Parce que les SGBD ne savent pas gérer le protocole HTTPS',
+      'Parce que cela ralentirait les requêtes',
+      'Parce que le navigateur ne sait pas parler SQL',
+    ],
+    bonneReponse: 0,
+    explication:
+      'C’est du cloisonnement : le seul point d’entrée public est l’API, qui contrôle l’authentification et les autorisations. Une base exposée expose aussi ses comptes et toutes ses données à qui trouve un mot de passe faible. En Docker Compose, cela se traduit par l’absence de section `ports:` sur le service de base de données.',
+  },
+  {
+    id: 'archi-022',
+    theme: 'architecture',
+    type: 'remettre_ordre',
+    difficulte: 2,
+    enonce: 'Remettez dans l’ordre le trajet d’une requête de création de demande, de l’utilisateur à la base.',
+    elements: [
+      'La vue envoie la requête HTTP',
+      'Le Controller valide le format et délègue',
+      'Le Service applique les règles métier',
+      'Le Repository exécute la requête SQL paramétrée',
+      'La base enregistre la ligne',
+    ],
+    explication:
+      'Les dépendances vont vers le bas : le Controller connaît le Service, le Service connaît le Repository, et jamais l’inverse. Chaque couche ne parle qu’à sa voisine immédiate — c’est ce qui permet de tester le Service sans base et de changer la vue sans toucher au métier.',
+  },
 ];

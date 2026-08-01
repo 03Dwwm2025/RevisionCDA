@@ -6,7 +6,9 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // Le lint ne couvre que le code du site : l'outillage BYAN (_byan, .claude)
+  // vit dans le dépôt mais n'en fait pas partie.
+  globalIgnores(['dist', '_byan/**', '_byan-output/**', '.claude/**', '.githooks/**']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

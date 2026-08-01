@@ -1,73 +1,72 @@
-# React + TypeScript + Vite
+# Révision CDA
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Site personnel de révision pour le titre professionnel **Concepteur Développeur d'Applications** (niveau 6, promo 2026).
 
-Currently, two official plugins are available:
+Deux usages : lire le cours découpé par chapitre, et s'entraîner sur des séries de questions — par thème, en examen blanc chronométré, ou en rejouant ses erreurs passées.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Ce qu'il y a dedans
 
-## React Compiler
+- **26 chapitres** couvrant les trois blocs de compétences du référentiel : conception, développement, déploiement — avec la sécurité traitée à chaque étape.
+- **344 questions** réparties sur 17 thèmes, dans cinq formats : choix multiple, vrai/faux, association, complétion de code et remise en ordre.
+- **Trois modes d'entraînement** : série par thème, examen blanc (25 questions tirées de façon équilibrée entre les thèmes, 30 minutes), et rattrapage des questions déjà ratées.
+- **Progression mémorisée** dans le navigateur : dernier score par thème et liste des erreurs à rejouer.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Démarrer
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev        # http://localhost:5173
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Commandes
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Commande | Rôle |
+| --- | --- |
+| `npm run dev` | Serveur de développement |
+| `npm run build` | Vérification des types puis build de production dans `dist/` |
+| `npm run preview` | Servir le build de production en local |
+| `npm test` | Suite de tests (Vitest) |
+| `npm run test:watch` | Tests en continu pendant le développement |
+| `npm run lint` | ESLint sur le code du site |
+| `npm run verifier` | Enchaîne lint, tests et build |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Structure
+
 ```
+cours/                   Contenu du cours en markdown + index.json et parties.json
+public/cours             Lien symbolique vers cours/, servi tel quel par Vite
+src/
+  components/            Mise en page, navigation, icônes
+  components/quiz/       Moteur de quiz et les cinq types de question
+  data/questions/        Les questions, un fichier par thème
+  hooks/                 Chargement du cours, progression, thème clair/sombre
+  pages/                 Accueil, lecture, quiz par thème, examen, erreurs
+  types/                 Modèle de données du cours et des questions
+  utils/                 Mélange, tirage stratifié, accents de partie
+```
+
+## Ajouter du contenu
+
+**Un chapitre** : déposer le fichier `.md` dans `cours/`, puis l'ajouter à `cours/index.json` avec son titre et sa partie. Pour proposer un quiz en fin de chapitre, ajouter une entrée dans `src/data/questions/chapitres.ts`.
+
+**Des questions** : les ajouter au fichier du thème dans `src/data/questions/`, puis mettre à jour `src/data/questions/compte.ts`. La suite de tests vérifie l'intégrité des données à chaque exécution :
+
+- identifiants uniques, thème cohérent, énoncé et explication non vides ;
+- choix multiples : au moins trois options distinctes, bonne réponse dans les bornes ;
+- associations : aucun terme ni définition en double ;
+- complétion de code : trous numérotés de 1 à N, une réponse par trou, réponses présentes dans les choix, au moins un distracteur, et question résoluble ;
+- remise en ordre : au moins trois éléments distincts ;
+- compteurs de la navigation synchronisés avec les données réelles.
+
+Un `npm test` avant de commiter suffit à attraper les erreurs de saisie.
+
+## Déploiement
+
+Hébergé sur **Vercel**. Le `vercel.json` fournit la réécriture SPA (pour que les liens profonds fonctionnent au rechargement), les en-têtes de sécurité et le cache des ressources versionnées.
+
+## Choix techniques
+
+- **React + Vite + TypeScript**, aucune dépendance d'interface : la mise en forme est faite avec Tailwind v4 et un petit jeu d'icônes SVG local.
+- **Tout est statique** : le contenu vit dans le dépôt, il n'y a ni API ni base de données.
+- **Aucun compte** : la progression reste dans le `localStorage` du navigateur.
+- Le lot de questions et le moteur de rendu markdown sont chargés à la demande, pour que l'accueil reste léger.

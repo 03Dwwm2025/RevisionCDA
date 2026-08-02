@@ -7,20 +7,13 @@ import { useProgression } from '../hooks/useProgression';
 import { QUESTIONS_BY_THEME, SLUG_TO_THEME } from '../data/questions';
 import { accentPartie } from '../utils/parties';
 import { ancre } from '../utils/recherche';
+import { useChecklist } from '../hooks/useChecklist';
+import ElementChecklist from '../components/ElementChecklist';
+import { texteDe } from '../utils/noeuds';
 import Icone from '../components/Icone';
 
 function slugDe(file: string) {
   return file.replace(/\.md$/, '');
-}
-
-/** Aplatit les enfants d'un titre pour en dériver une ancre. */
-function texteDe(noeud: React.ReactNode): string {
-  if (typeof noeud === 'string' || typeof noeud === 'number') return String(noeud);
-  if (Array.isArray(noeud)) return noeud.map(texteDe).join('');
-  if (noeud && typeof noeud === 'object' && 'props' in noeud) {
-    return texteDe((noeud as { props: { children?: React.ReactNode } }).props.children);
-  }
-  return '';
 }
 
 const COMPOSANTS_MARKDOWN = {
@@ -34,7 +27,61 @@ const COMPOSANTS_MARKDOWN = {
   h3: ({ children }: { children?: React.ReactNode }) => (
     <h3 id={ancre(texteDe(children))}>{children}</h3>
   ),
+  // Les listes à cocher du markdown deviennent des cases réellement cliquables.
+  li: ({ className, children }: { className?: string; children?: React.ReactNode }) =>
+    className?.includes('task-list-item') ? (
+      <ElementChecklist>{children}</ElementChecklist>
+    ) : (
+      <li className={className}>{children}</li>
+    ),
 };
+
+/** Récapitulatif affiché en tête d'un chapitre qui contient une checklist. */
+function AvancementChecklist({ slug, total }: { slug: string | undefined; total: number }) {
+  const { nbCochees, reinitialiser } = useChecklist(slug);
+  const pourcent = total > 0 ? Math.round((nbCochees / total) * 100) : 0;
+  const fini = nbCochees >= total;
+
+  return (
+    <div className="carte mb-8 p-4">
+      <div className="mb-2 flex items-baseline justify-between gap-4">
+        <p className="text-sm font-semibold text-ardoise-800 dark:text-ardoise-200">
+          {fini ? 'Checklist terminée' : `${nbCochees} sur ${total}`}
+          <span className="ml-2 font-normal text-ardoise-500 dark:text-ardoise-400">
+            {fini ? 'tout est coché' : `${pourcent} %`}
+          </span>
+        </p>
+        {nbCochees > 0 && (
+          <button
+            type="button"
+            onClick={reinitialiser}
+            className="rounded-lg px-2 py-1 text-xs font-semibold text-ardoise-500 transition-colors hover:bg-ardoise-100 hover:text-ardoise-800 dark:text-ardoise-400 dark:hover:bg-ardoise-800 dark:hover:text-ardoise-100"
+          >
+            Tout décocher
+          </button>
+        )}
+      </div>
+
+      <div
+        className="h-2 overflow-hidden rounded-full bg-ardoise-200 dark:bg-ardoise-800"
+        role="progressbar"
+        aria-label="Avancement de la checklist"
+        aria-valuenow={nbCochees}
+        aria-valuemin={0}
+        aria-valuemax={total}
+      >
+        <div
+          className={`h-full rounded-full transition-[width] duration-300 ${fini ? 'bg-emerald-500' : 'bg-encre-500'}`}
+          style={{ width: `${pourcent}%` }}
+        />
+      </div>
+
+      <p className="mt-2 text-xs text-ardoise-500 dark:text-ardoise-400">
+        Les cases cochées sont mémorisées dans ce navigateur.
+      </p>
+    </div>
+  );
+}
 
 function BarreLecture({ cible }: { cible: React.RefObject<HTMLElement | null> }) {
   const [avancement, setAvancement] = useState(0);
@@ -89,6 +136,7 @@ export default function LectureChapitre() {
   const theme = slug ? SLUG_TO_THEME[slug] : undefined;
   const nbQuestions = theme ? (QUESTIONS_BY_THEME[theme]?.length ?? 0) : 0;
   const accent = accentPartie(meta?.part);
+  const nbTaches = contenu ? (contenu.match(/^- \[[ xX]\]/gm) ?? []).length : 0;
 
   // Le contenu arrive après le premier rendu : le navigateur ne peut pas sauter
   // tout seul vers l'ancre demandée, on le fait une fois le markdown affiché.
@@ -130,6 +178,8 @@ export default function LectureChapitre() {
             {meta.part}
           </p>
         )}
+
+        {nbTaches > 0 && <AvancementChecklist slug={slug} total={nbTaches} />}
 
         <div className="prose-cours">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={COMPOSANTS_MARKDOWN}>

@@ -142,9 +142,10 @@ export const questionsPOO: Question[] = [
     theme: 'poo',
     type: 'completer_code',
     difficulte: 2,
-    enonce: 'Complétez ce pseudo-code : un solde protégé, modifiable uniquement par les méthodes de la classe.',
+    enonce:
+      'Complétez ce pseudo-code : le solde doit être inaccessible depuis l’extérieur de la classe, et modifiable uniquement par ses méthodes.',
     codeAvecTrous: `classe CompteBancaire :
-    ___1___ solde : decimal        # inaccessible depuis l'extérieur
+    ___1___ solde : decimal        # même les classes filles n'y touchent pas
 
     ___2___ fonction lireSolde() : # seule lecture autorisée
         retourner ceci.solde
@@ -155,7 +156,7 @@ export const questionsPOO: Question[] = [
     choix: ['prive', 'public', 'protege', '+=', '-=', '='],
     bonnesReponses: ['prive', 'public', '+='],
     explication:
-      'Le solde privé ne peut être modifié que par les méthodes de la classe, qui font respecter la règle « un dépôt est positif ». Rendre le champ public reviendrait à autoriser n’importe quel code à écrire un solde négatif : c’est exactement ce que l’encapsulation empêche.',
+      'Le niveau privé est le plus fermé : même une classe fille n’accède pas au champ. Le niveau protégé, lui, l’ouvrirait aux classes filles — ce n’est pas ce qu’on veut ici. Les méthodes, elles, sont publiques : elles forment la seule porte d’entrée, et font respecter la règle « un dépôt est positif ».',
   },
   {
     id: 'poo-012',

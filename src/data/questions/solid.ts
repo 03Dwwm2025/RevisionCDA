@@ -81,13 +81,13 @@ export const questionsSOLID: Question[] = [
     type: 'completer_code',
     difficulte: 2,
     enonce:
-      'Complétez ce pseudo-code qui applique l’inversion des dépendances : la couche métier ne connaît qu’un contrat.',
+      'Complétez ce pseudo-code qui applique l’inversion des dépendances : la couche métier ne doit dépendre d’aucune classe concrète.',
     codeAvecTrous: `___1___ IDepotDemande :
     enregistrer(demande)
     listerParSalarie(idSalarie)
 
 classe ServiceConges :
-    depot : ___2___          # on déclare le contrat, pas la classe concrète
+    depot : ___2___          # ce qu'on déclare, ce n'est pas la classe concrète
 
     constructeur(depot) :    # la dépendance est reçue, pas créée
         ceci.depot = depot
@@ -107,7 +107,7 @@ service = nouveau ServiceConges(nouveau DepotEnMemoire())`,
     ],
     bonnesReponses: ['contrat', 'IDepotDemande', 'DepotDemandeSql'],
     explication:
-      'Le service déclare ce dont il a besoin (le contrat) et le reçoit de l’extérieur. En production on lui passe le dépôt qui parle à la base, en test un dépôt en mémoire — sans modifier une ligne du service. Ce contrat s’appelle interface en C# ou Java, protocole en Swift, classe abstraite en Python ; le principe ne change pas.',
+      'Le service déclare ce dont il a besoin et le reçoit de l’extérieur. En production on lui passe le dépôt qui parle à la base, en test un dépôt en mémoire — sans modifier une ligne du service. Ce contrat s’appelle interface en C# ou Java, protocole en Swift, classe abstraite en Python ; le principe ne change pas.',
   },
   {
     id: 'solid-007',

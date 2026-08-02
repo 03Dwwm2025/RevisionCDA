@@ -239,7 +239,7 @@ export const questionsArchitecture: Question[] = [
     type: 'completer_code',
     difficulte: 2,
     enonce:
-      'Complétez ce pseudo-code du patron Fabrique : le constructeur est fermé, la création passe par des méthodes nommées.',
+      'Complétez ce pseudo-code du patron Fabrique : on interdit la construction directe de l’objet, et la création passe par des méthodes nommées.',
     codeAvecTrous: `classe Resultat :
     succes : booleen
     message : texte
@@ -254,7 +254,7 @@ export const questionsArchitecture: Question[] = [
     choix: ['prive', 'public', 'protege', 'statique', 'abstrait', 'vrai', 'faux'],
     bonnesReponses: ['prive', 'statique', 'faux'],
     explication:
-      'Le constructeur privé interdit de créer l’objet directement ; les méthodes statiques nommées deviennent le seul chemin. `Resultat.Erreur("Solde insuffisant")` se lit mieux qu’un constructeur à paramètres booléens, et surtout il devient impossible de fabriquer un objet incohérent — un échec sans message, par exemple.',
+      'Le constructeur privé interdit de créer l’objet directement ; les méthodes statiques nommées deviennent le seul chemin. `Resultat.Erreur("Solde insuffisant")` se lit mieux qu’un constructeur à paramètres booléens, et surtout il devient impossible de fabriquer un objet incohérent — un échec sans message, par exemple. À ne pas confondre avec le principe ouvert/fermé : ici « privé » désigne une visibilité, pas une règle de conception.',
   },
   {
     id: 'archi-017',

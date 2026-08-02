@@ -227,6 +227,10 @@ describe('indépendance vis-à-vis d’un langage ou d’un cadriciel', () => {
     'C#',
     '.NET',
     'LINQ',
+    'Tailwind',
+    'md:',
+    'sm:',
+    'lg:',
     'StringBuilder',
   ];
 

@@ -401,20 +401,26 @@ CREATE TABLE Demande (
     theme: 'conception',
     type: 'completer_code',
     difficulte: 2,
-    enonce: 'Complétez ce HTML Tailwind pour rendre la sidebar responsive : cachée sur mobile, visible à partir de `md`, et le bouton hamburger visible uniquement sur mobile.',
-    codeAvecTrous: `<!-- Sidebar : cachée sur mobile, affichée en bloc à partir de md -->
-<aside class="___1___ md:block w-64 bg-gray-100 p-4">
-  Navigation
-</aside>
+    enonce:
+      'Complétez cette feuille de style conçue en mobile d’abord : la barre latérale est masquée sur petit écran et apparaît à partir de 768 px, le bouton de menu fait l’inverse.',
+    codeAvecTrous: `/* Base : ce qui s'applique à TOUS les écrans, donc au plus petit */
+.barre-laterale {
+  ___1___: none;          /* masquée par défaut */
+}
 
-<!-- Bouton hamburger : visible sur mobile, caché à partir de md -->
-<button class="block ___2___ p-2">
-  ☰ Menu
-</button>`,
-    choix: ['hidden', 'flex', 'block', 'md:hidden', 'md:block', 'invisible', 'w-full', 'md:flex'],
-    bonnesReponses: ['hidden', 'md:hidden'],
+.bouton-menu {
+  display: block;         /* visible par défaut */
+}
+
+/* À partir de 768 px, on enrichit */
+@media (___2___: 768px) {
+  .barre-laterale { display: block; }
+  .bouton-menu    { ___3___: none; }
+}`,
+    choix: ['display', 'visibility', 'opacity', 'min-width', 'max-width', 'orientation'],
+    bonnesReponses: ['display', 'min-width', 'display'],
     explication:
-      'En mobile-first Tailwind, la classe de base s\'applique à tous les écrans, le préfixe `md:` s\'applique à partir de 768px. `hidden` = `display: none` par défaut. `md:block` = `display: block` à partir de md. Le bouton hamburger fait l\'inverse : visible par défaut (`block`), caché à partir de md (`md:hidden`).',
+      'En mobile d’abord, les règles de base visent le plus petit écran et la requête de média ajoute ce qu’un écran plus large permet — d’où `min-width` et non `max-width`. `display: none` retire complètement l’élément du flux ; `visibility: hidden` le masquerait en gardant sa place, et `opacity: 0` le laisserait cliquable.',
   },
   {
     id: 'concep-029',

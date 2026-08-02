@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useChapitre, useCoursIndex } from '../hooks/useCours';
+import { useProgression } from '../hooks/useProgression';
 import { QUESTIONS_BY_THEME, SLUG_TO_THEME } from '../data/questions';
 import { accentPartie } from '../utils/parties';
 import Icone from '../components/Icone';
@@ -73,6 +74,12 @@ export default function LectureChapitre() {
   const theme = slug ? SLUG_TO_THEME[slug] : undefined;
   const nbQuestions = theme ? (QUESTIONS_BY_THEME[theme]?.length ?? 0) : 0;
   const accent = accentPartie(meta?.part);
+
+  // Mémorise le chapitre pour proposer de reprendre la lecture depuis l'accueil.
+  const { enregistrerLecture } = useProgression();
+  useEffect(() => {
+    if (slug && meta?.title) enregistrerLecture(slug, meta.title);
+  }, [slug, meta?.title, enregistrerLecture]);
 
   if (loading) {
     return <div className="flex h-64 items-center justify-center text-ardoise-400">Chargement…</div>;

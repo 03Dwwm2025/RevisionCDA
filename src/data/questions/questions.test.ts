@@ -5,6 +5,7 @@ import type { Question } from '../../types/quiz';
 import { analyserTrous } from '../../components/quiz/trous';
 import { checkAnswer } from '../../components/quiz/checkAnswer';
 import { NB_QUESTIONS_PAR_THEME, NB_QUESTIONS_TOTAL } from './compte';
+import { THEME_TO_SLUG } from './chapitres';
 
 const toutes = getAllQuestions();
 
@@ -245,5 +246,17 @@ describe('indépendance vis-à-vis d’un langage ou d’un cadriciel', () => {
       return trouves.length > 0 ? [`${q.id} : ${trouves.join(', ')}`] : [];
     });
     expect(fautives).toEqual([]);
+  });
+});
+
+describe('table thème vers chapitre', () => {
+  it('donne un chapitre d’entraînement à chaque thème', () => {
+    const sans = THEMES.filter((t) => !THEME_TO_SLUG[t]);
+    expect(sans).toEqual([]);
+  });
+
+  it('renvoie vers un chapitre qui porte bien ce thème', () => {
+    const incoherents = THEMES.filter((t) => SLUG_TO_THEME[THEME_TO_SLUG[t]!] !== t);
+    expect(incoherents).toEqual([]);
   });
 });

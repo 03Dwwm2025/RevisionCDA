@@ -3,7 +3,7 @@ import { appliquerResultats } from './useProgression';
 import type { Progression } from './useProgression';
 import type { ResultatQuestion } from '../types/quiz';
 
-const vide: Progression = { scores: {}, erreurs: [], sessions: 0 };
+const vide: Progression = { scores: {}, erreurs: [], sessions: 0, derniereLecture: null };
 
 function resultat(id: string, correct: boolean): ResultatQuestion {
   return { id, theme: 'poo', correct, reponse: null };

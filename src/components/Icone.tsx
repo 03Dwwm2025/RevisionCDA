@@ -19,7 +19,10 @@ export type NomIcone =
   | 'rejouer'
   | 'accueil'
   | 'eclair'
-  | 'liste';
+  | 'liste'
+  | 'bas'
+  | 'reprendre'
+  | 'flamme';
 
 // Traits SVG 24x24, contour uniquement : un seul jeu d'icônes, aucune dépendance.
 const TRACES: Record<NomIcone, string> = {
@@ -39,6 +42,9 @@ const TRACES: Record<NomIcone, string> = {
   accueil: 'M4 11l8-7 8 7M6 10v10h12V10',
   eclair: 'M13 2L4 14h7l-1 8 9-12h-7z',
   liste: 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01',
+  bas: 'M6 9l6 6 6-6',
+  reprendre: 'M5 4l14 8-14 8z',
+  flamme: 'M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-1.5.7-2.8 1.6-3.9C9.4 9.6 10 8 10 8s1 1.5 2 2c0-2.5 0-5 0-7z',
 };
 
 export default function Icone({ nom, className = 'h-5 w-5' }: Props) {

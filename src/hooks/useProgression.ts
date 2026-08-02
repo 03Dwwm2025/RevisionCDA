@@ -4,6 +4,13 @@ import type { ResultatQuestion, ScoreTheme, Theme } from '../types/quiz';
 const CLE = 'revision-cda-progression-v1';
 const MAX_ERREURS = 200;
 
+/** Dernier chapitre ouvert, pour proposer de reprendre la lecture. */
+export interface DerniereLecture {
+  slug: string;
+  titre: string;
+  date: string;
+}
+
 export interface Progression {
   /** Dernier score obtenu sur chaque thème. */
   scores: Partial<Record<Theme, ScoreTheme>>;
@@ -11,9 +18,11 @@ export interface Progression {
   erreurs: string[];
   /** Nombre de séries terminées, tous modes confondus. */
   sessions: number;
+  /** Chapitre ouvert le plus récemment. */
+  derniereLecture: DerniereLecture | null;
 }
 
-const VIDE: Progression = { scores: {}, erreurs: [], sessions: 0 };
+const VIDE: Progression = { scores: {}, erreurs: [], sessions: 0, derniereLecture: null };
 
 function lire(): Progression {
   try {
@@ -24,6 +33,7 @@ function lire(): Progression {
       scores: donnees.scores ?? {},
       erreurs: Array.isArray(donnees.erreurs) ? donnees.erreurs : [],
       sessions: typeof donnees.sessions === 'number' ? donnees.sessions : 0,
+      derniereLecture: donnees.derniereLecture ?? null,
     };
   } catch {
     return VIDE;
@@ -56,6 +66,7 @@ export function appliquerResultats(
   }
 
   return {
+    ...actuelle,
     scores,
     erreurs: erreurs.slice(-MAX_ERREURS),
     sessions: actuelle.sessions + 1,
@@ -97,7 +108,16 @@ export function useProgression() {
     [],
   );
 
+  const enregistrerLecture = useCallback((slug: string, titre: string) => {
+    // Rouvrir le même chapitre ne déclenche pas d'écriture inutile.
+    if (progression.derniereLecture?.slug === slug) return;
+    ecrire({
+      ...progression,
+      derniereLecture: { slug, titre, date: new Date().toISOString() },
+    });
+  }, []);
+
   const reinitialiser = useCallback(() => ecrire(VIDE), []);
 
-  return { ...courante, enregistrerSession, reinitialiser };
+  return { ...courante, enregistrerSession, enregistrerLecture, reinitialiser };
 }

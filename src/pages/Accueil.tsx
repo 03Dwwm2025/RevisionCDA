@@ -1,97 +1,112 @@
 import { Link } from 'react-router-dom';
-import { useCoursIndex, useParties } from '../hooks/useCours';
+import { useCoursIndex } from '../hooks/useCours';
 import { useProgression } from '../hooks/useProgression';
-import { SLUG_TO_THEME } from '../data/questions/chapitres';
+import { useSectionsOuvertes } from '../hooks/useSectionsOuvertes';
+import { SLUG_TO_THEME, THEME_TO_SLUG } from '../data/questions/chapitres';
 import { NB_QUESTIONS_PAR_THEME, NB_QUESTIONS_TOTAL } from '../data/questions/compte';
-import { accentPartie } from '../utils/parties';
-import type { ChapitreIndex } from '../types/cours';
 import { THEMES, THEME_LABELS } from '../types/quiz';
 import type { ScoreTheme } from '../types/quiz';
+import type { ChapitreIndex } from '../types/cours';
+import { accentPartie } from '../utils/parties';
+import { ilYA } from '../utils/dates';
+import Depliant from '../components/Depliant';
 import Icone from '../components/Icone';
+
+const SEUIL_A_RETRAVAILLER = 0.8;
+const NB_SUGGESTIONS = 3;
 
 function slugDe(file: string) {
   return file.replace(/\.md$/, '');
 }
 
-function couleurScore(pourcent: number) {
-  if (pourcent >= 80) return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300';
-  if (pourcent >= 60) return 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300';
-  return 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300';
+function pourcent(s: ScoreTheme) {
+  return Math.round((s.score / s.total) * 100);
 }
 
-function Tuile({ valeur, libelle }: { valeur: string | number; libelle: string }) {
+function teinte(p: number) {
+  if (p >= 80) return { texte: 'text-emerald-600 dark:text-emerald-400', barre: 'bg-emerald-500' };
+  if (p >= 60) return { texte: 'text-amber-600 dark:text-amber-400', barre: 'bg-amber-500' };
+  return { texte: 'text-rose-600 dark:text-rose-400', barre: 'bg-rose-500' };
+}
+
+function Bloc({
+  titre,
+  indication,
+  children,
+}: {
+  titre: string;
+  indication?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="carte px-4 py-3">
-      <p className="text-2xl font-bold tabular-nums text-ardoise-900 dark:text-white">{valeur}</p>
-      <p className="text-xs text-ardoise-500 dark:text-ardoise-400">{libelle}</p>
-    </div>
+    <section className="mb-4">
+      <h2 className="mb-2 flex items-baseline justify-between gap-3 px-1">
+        <span className="text-xs font-bold tracking-wider text-ardoise-500 uppercase dark:text-ardoise-400">
+          {titre}
+        </span>
+        {indication && (
+          <span className="text-xs text-ardoise-400 dark:text-ardoise-500">{indication}</span>
+        )}
+      </h2>
+      {children}
+    </section>
   );
 }
 
-function CarteChapitre({ chapitre, score }: { chapitre: ChapitreIndex; score?: ScoreTheme }) {
-  const slug = slugDe(chapitre.file);
-  const theme = SLUG_TO_THEME[slug];
-  const nbQuestions = theme ? NB_QUESTIONS_PAR_THEME[theme] : 0;
-  const accent = accentPartie(chapitre.part);
-  const pourcent = score ? Math.round((score.score / score.total) * 100) : null;
+function LigneTheme({ score }: { score: ScoreTheme }) {
+  const p = pourcent(score);
+  const couleurs = teinte(p);
+  const slug = THEME_TO_SLUG[score.theme];
 
   return (
-    <Link
-      to={`/cours/${slug}`}
-      className="carte carte-cliquable group flex flex-col gap-3 p-4 focus-visible:outline-2"
-    >
-      <div className="flex items-start gap-3">
-        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${accent.point}`} />
-        <p className="flex-1 font-semibold leading-snug text-ardoise-900 group-hover:text-encre-700 dark:text-ardoise-100 dark:group-hover:text-encre-300">
-          {chapitre.title}
-        </p>
-        {pourcent !== null && (
-          <span className={`puce shrink-0 tabular-nums ${couleurScore(pourcent)}`}>{pourcent} %</span>
-        )}
+    <div className="flex items-center gap-3 px-4 py-3">
+      <span className="w-36 shrink-0 truncate text-sm font-medium text-ardoise-800 dark:text-ardoise-200">
+        {THEME_LABELS[score.theme]}
+      </span>
+
+      <span className={`w-10 shrink-0 text-sm font-bold tabular-nums ${couleurs.texte}`}>
+        {p} %
+      </span>
+
+      <div className="hidden h-1.5 flex-1 overflow-hidden rounded-full bg-ardoise-200 sm:block dark:bg-ardoise-800">
+        <div className={`h-full rounded-full ${couleurs.barre}`} style={{ width: `${p}%` }} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ardoise-500 dark:text-ardoise-400">
-        {theme ? (
-          <span className="flex items-center gap-1">
-            <Icone nom="cible" className="h-3.5 w-3.5" />
-            Quiz {THEME_LABELS[theme].toLowerCase()} · {nbQuestions} questions
-          </span>
-        ) : (
-          <span className="flex items-center gap-1">
-            <Icone nom="livre" className="h-3.5 w-3.5" />
-            Lecture seule
-          </span>
-        )}
-        {score && (
-          <span className="tabular-nums">
-            {score.score}/{score.total} au dernier essai
-          </span>
-        )}
-      </div>
-    </Link>
+      {slug && (
+        <Link
+          to={`/quiz/${slug}`}
+          className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold text-encre-700 transition-colors hover:bg-encre-50 dark:text-encre-300 dark:hover:bg-encre-500/15"
+        >
+          S’entraîner
+        </Link>
+      )}
+    </div>
   );
 }
 
 export default function Accueil() {
   const { chapitres, loading } = useCoursIndex();
-  const parties = useParties();
-  const { scores, erreurs } = useProgression();
+  const { scores, erreurs, derniereLecture } = useProgression();
+  const { ouvertes, basculer } = useSectionsOuvertes('revision-cda-accueil', () => []);
 
   if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center text-ardoise-400">Chargement…</div>
-    );
+    return <div className="flex h-64 items-center justify-center text-ardoise-400">Chargement…</div>;
   }
 
-  const themesRevises = Object.keys(scores).length;
-  const moyenne = (() => {
-    const valeurs = Object.values(scores) as ScoreTheme[];
-    if (valeurs.length === 0) return null;
-    const total = valeurs.reduce((somme, s) => somme + s.score / s.total, 0);
-    return Math.round((total / valeurs.length) * 100);
-  })();
+  const testes = Object.values(scores) as ScoreTheme[];
+  const moyenne =
+    testes.length > 0
+      ? Math.round((testes.reduce((s, x) => s + x.score / x.total, 0) / testes.length) * 100)
+      : null;
 
-  const ordreParties = parties.length > 0 ? parties.map((p) => p.nom) : [];
+  const aRetravailler = [...testes]
+    .sort((a, b) => a.score / a.total - b.score / b.total)
+    .filter((s) => s.score / s.total < SEUIL_A_RETRAVAILLER)
+    .slice(0, NB_SUGGESTIONS);
+
+  const jamaisTestes = THEMES.filter((t) => !scores[t]);
+  const debut = testes.length === 0 && !derniereLecture;
+
   const groupes = new Map<string, ChapitreIndex[]>();
   for (const c of chapitres) {
     const cle = c.part ?? 'AUTRES';
@@ -99,83 +114,197 @@ export default function Accueil() {
     if (lot) lot.push(c);
     else groupes.set(cle, [c]);
   }
-  const clesTriees = [...groupes.keys()].sort(
-    (a, b) => (ordreParties.indexOf(a) + 1 || 99) - (ordreParties.indexOf(b) + 1 || 99),
-  );
 
   return (
-    <div className="anim-entree mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-12">
+    <div className="anim-entree mx-auto max-w-3xl px-5 py-8 sm:px-8 sm:py-10">
       <header className="mb-8">
-        <p className="mb-2 text-sm font-semibold text-encre-600 dark:text-encre-400">
-          Titre professionnel niveau 6
-        </p>
-        <h1 className="text-3xl font-bold tracking-tight text-ardoise-900 sm:text-5xl dark:text-white">
-          Concepteur développeur d’applications
-        </h1>
-        <p className="mt-3 max-w-2xl text-ardoise-600 dark:text-ardoise-400">
-          Le cours complet, découpé par thème, et {NB_QUESTIONS_TOTAL} questions pour s’entraîner sur
-          les trois blocs de compétences.
-        </p>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="mb-1 text-xs font-semibold tracking-wide text-encre-600 uppercase dark:text-encre-400">
+              Titre professionnel niveau 6
+            </p>
+            <h1 className="text-3xl font-bold tracking-tight text-ardoise-900 sm:text-4xl dark:text-white">
+              Révision CDA
+            </h1>
+            <p className="mt-1.5 text-sm text-ardoise-500 dark:text-ardoise-400">
+              {chapitres.length} chapitres · {NB_QUESTIONS_TOTAL} questions ·{' '}
+              {moyenne === null ? 'aucun score' : `moyenne ${moyenne} %`}
+            </p>
+          </div>
+
+          <Link to="/examen" className="btn btn-principal">
+            <Icone nom="chrono" className="h-4 w-4" />
+            Examen blanc
+          </Link>
+        </div>
       </header>
 
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Tuile valeur={chapitres.length} libelle="chapitres" />
-        <Tuile valeur={NB_QUESTIONS_TOTAL} libelle="questions" />
-        <Tuile valeur={`${themesRevises}/${THEMES.length}`} libelle="thèmes révisés" />
-        <Tuile valeur={moyenne === null ? '—' : `${moyenne} %`} libelle="moyenne" />
-      </div>
-
-      <div className="mb-12 flex flex-wrap gap-3">
-        <Link to="/examen" className="btn btn-principal">
-          <Icone nom="chrono" className="h-4 w-4" />
-          Lancer un examen blanc
-        </Link>
-        <Link
-          to="/erreurs"
-          className={`btn ${erreurs.length > 0 ? 'btn-danger' : 'btn-secondaire'}`}
-          aria-disabled={erreurs.length === 0}
-        >
-          <Icone nom="rejouer" className="h-4 w-4" />
-          {erreurs.length > 0
-            ? `Rejouer mes ${erreurs.length} erreur${erreurs.length > 1 ? 's' : ''}`
-            : 'Aucune erreur à rejouer'}
-        </Link>
-      </div>
-
-      {clesTriees.map((cle) => {
-        const accent = accentPartie(cle);
-        const partie = parties.find((p) => p.nom === cle);
-        return (
-          <section key={cle} className="mb-12">
-            <div className="mb-4">
-              <h2
-                className={`flex items-center gap-2 text-xs font-bold tracking-widest uppercase ${accent.texte}`}
-              >
-                <span className={`h-2 w-2 rounded-full ${accent.point}`} />
-                {cle}
-              </h2>
-              {partie && (
-                <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ardoise-600 dark:text-ardoise-400">
-                  {partie.resume}
-                </p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {(groupes.get(cle) ?? []).map((c) => {
-                const theme = SLUG_TO_THEME[slugDe(c.file)];
-                return (
-                  <CarteChapitre
+      {debut && (
+        <Bloc titre="Par où commencer">
+          <div className="carte p-5">
+            <p className="mb-4 text-sm leading-relaxed text-ardoise-600 dark:text-ardoise-400">
+              Rien n’est encore enregistré. Ouvre un chapitre pour le lire, ou lance directement une
+              série de questions — le site retiendra tes scores et les questions ratées.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {chapitres
+                .filter((c) => SLUG_TO_THEME[slugDe(c.file)])
+                .slice(0, NB_SUGGESTIONS)
+                .map((c) => (
+                  <Link
                     key={c.file}
-                    chapitre={c}
-                    score={theme ? scores[theme] : undefined}
-                  />
-                );
-              })}
+                    to={`/cours/${slugDe(c.file)}`}
+                    className="btn btn-secondaire text-xs"
+                  >
+                    {c.title}
+                  </Link>
+                ))}
             </div>
-          </section>
-        );
-      })}
+          </div>
+        </Bloc>
+      )}
+
+      {derniereLecture && (
+        <Bloc titre="Reprendre">
+          <Link
+            to={`/cours/${derniereLecture.slug}`}
+            className="carte carte-cliquable flex items-center gap-4 p-4"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-encre-100 text-encre-600 dark:bg-encre-500/15 dark:text-encre-400">
+              <Icone nom="reprendre" className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-semibold text-ardoise-900 dark:text-ardoise-100">
+                {derniereLecture.titre}
+              </span>
+              <span className="block text-xs text-ardoise-500 dark:text-ardoise-400">
+                Ouvert {ilYA(derniereLecture.date)}
+              </span>
+            </span>
+            <Icone nom="droite" className="h-5 w-5 shrink-0 text-ardoise-400" />
+          </Link>
+        </Bloc>
+      )}
+
+      {aRetravailler.length > 0 && (
+        <Bloc
+          titre="À retravailler"
+          indication={`${aRetravailler.length} thème${aRetravailler.length > 1 ? 's' : ''} sous ${SEUIL_A_RETRAVAILLER * 100} %`}
+        >
+          <div className="carte divide-y divide-ardoise-200 dark:divide-ardoise-800">
+            {aRetravailler.map((s) => (
+              <LigneTheme key={s.theme} score={s} />
+            ))}
+          </div>
+        </Bloc>
+      )}
+
+      {erreurs.length > 0 && (
+        <Bloc titre="Mes erreurs">
+          <Link
+            to="/erreurs"
+            className="carte carte-cliquable flex items-center gap-4 p-4"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400">
+              <Icone nom="rejouer" className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold text-ardoise-900 dark:text-ardoise-100">
+                {erreurs.length} question{erreurs.length > 1 ? 's' : ''} à rejouer
+              </span>
+              <span className="block text-xs text-ardoise-500 dark:text-ardoise-400">
+                Une question réussie sort de la liste
+              </span>
+            </span>
+            <Icone nom="droite" className="h-5 w-5 shrink-0 text-ardoise-400" />
+          </Link>
+        </Bloc>
+      )}
+
+      {!debut && (
+        <Bloc titre="Couverture" indication={`${testes.length} / ${THEMES.length} thèmes testés`}>
+          <div className="carte p-4">
+            <div className="mb-2 h-2 overflow-hidden rounded-full bg-ardoise-200 dark:bg-ardoise-800">
+              <div
+                className="h-full rounded-full bg-encre-500 transition-[width] duration-500"
+                style={{ width: `${(testes.length / THEMES.length) * 100}%` }}
+              />
+            </div>
+            <p className="text-xs text-ardoise-500 dark:text-ardoise-400">
+              {jamaisTestes.length === 0
+                ? 'Tous les thèmes ont été testés au moins une fois.'
+                : `Jamais testé : ${jamaisTestes.slice(0, 4).map((t) => THEME_LABELS[t]).join(', ')}${
+                    jamaisTestes.length > 4 ? `, et ${jamaisTestes.length - 4} autres` : ''
+                  }.`}
+            </p>
+          </div>
+        </Bloc>
+      )}
+
+      <section className="mt-8 border-t border-ardoise-200 pt-4 dark:border-ardoise-800">
+        <Depliant
+          ouvert={ouvertes.has('programme')}
+          onBasculer={() => basculer('programme')}
+          classeEntete="text-ardoise-600 hover:bg-ardoise-100 dark:text-ardoise-400 dark:hover:bg-ardoise-800"
+          titre={
+            <span className="text-xs font-bold tracking-wider uppercase">Programme complet</span>
+          }
+          indication={
+            <span className="text-xs text-ardoise-400 dark:text-ardoise-500">
+              {groupes.size} parties · {chapitres.length} chapitres
+            </span>
+          }
+        >
+          <div className="mt-3 space-y-5">
+            {[...groupes.entries()].map(([partie, items]) => {
+              const accent = accentPartie(partie);
+              return (
+                <div key={partie}>
+                  <p
+                    className={`mb-1 flex items-center gap-2 px-3 text-[11px] font-bold tracking-wider uppercase ${accent.texte}`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${accent.point}`} />
+                    {partie}
+                  </p>
+
+                  {items.map((c) => {
+                    const slug = slugDe(c.file);
+                    const theme = SLUG_TO_THEME[slug];
+                    const score = theme ? scores[theme] : undefined;
+
+                    return (
+                      <Link
+                        key={c.file}
+                        to={`/cours/${slug}`}
+                        className="flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition-colors hover:bg-ardoise-100 dark:hover:bg-ardoise-800"
+                      >
+                        <span className="min-w-0 flex-1 truncate text-ardoise-700 dark:text-ardoise-300">
+                          {c.title}
+                        </span>
+                        {theme && (
+                          <span className="shrink-0 text-[11px] tabular-nums text-ardoise-400 dark:text-ardoise-500">
+                            {NB_QUESTIONS_PAR_THEME[theme]} q.
+                          </span>
+                        )}
+                        {/* Colonne de score : vide pour les chapitres sans quiz. */}
+                        <span
+                          className={`w-10 shrink-0 text-right text-xs font-semibold tabular-nums ${
+                            score
+                              ? teinte(pourcent(score)).texte
+                              : 'text-ardoise-300 dark:text-ardoise-600'
+                          }`}
+                        >
+                          {score ? `${pourcent(score)} %` : theme ? '—' : ''}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </Depliant>
+      </section>
     </div>
   );
 }

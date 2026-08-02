@@ -1,8 +1,11 @@
-import { NavLink } from 'react-router-dom';
+import { useMemo } from 'react';
+import { NavLink, useParams } from 'react-router-dom';
 import type { ChapitreIndex } from '../types/cours';
 import { SLUG_TO_THEME } from '../data/questions/chapitres';
 import { NB_QUESTIONS_PAR_THEME } from '../data/questions/compte';
 import { accentPartie } from '../utils/parties';
+import { useSectionsOuvertes } from '../hooks/useSectionsOuvertes';
+import Depliant from './Depliant';
 import Icone from './Icone';
 import type { NomIcone } from './Icone';
 
@@ -59,13 +62,27 @@ function LienPrincipal({
 }
 
 export default function Sidebar({ chapitres, nbErreurs, onNaviguer }: Props) {
-  const parParties = new Map<string, ChapitreIndex[]>();
-  for (const c of chapitres) {
-    const cle = c.part ?? 'AUTRES';
-    const lot = parParties.get(cle);
-    if (lot) lot.push(c);
-    else parParties.set(cle, [c]);
-  }
+  const { slug } = useParams<{ slug: string }>();
+
+  const parParties = useMemo(() => {
+    const table = new Map<string, ChapitreIndex[]>();
+    for (const c of chapitres) {
+      const cle = c.part ?? 'AUTRES';
+      const lot = table.get(cle);
+      if (lot) lot.push(c);
+      else table.set(cle, [c]);
+    }
+    return table;
+  }, [chapitres]);
+
+  // La partie du chapitre ouvert reste dépliée, même si elle était refermée.
+  const partieCourante = slug
+    ? chapitres.find((c) => slugDe(c.file) === slug)?.part
+    : undefined;
+
+  const { ouvertes, basculer } = useSectionsOuvertes('revision-cda-parties-ouvertes', () => [
+    'PARTIE I — CONCEPTION',
+  ]);
 
   return (
     <nav
@@ -84,45 +101,60 @@ export default function Sidebar({ chapitres, nbErreurs, onNaviguer }: Props) {
 
       <hr className="my-3 border-ardoise-200 dark:border-ardoise-800" />
 
-      {[...parParties.entries()].map(([partie, items]) => {
-        const accent = accentPartie(partie);
-        return (
-          <div key={partie} className="mb-4">
-            <p
-              className={`mb-1.5 flex items-center gap-2 px-3 text-[11px] font-bold tracking-wider uppercase ${accent.texte}`}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${accent.point}`} />
-              {partie}
-            </p>
+      <div className="space-y-0.5">
+        {[...parParties.entries()].map(([partie, items]) => {
+          const accent = accentPartie(partie);
+          const ouvert = ouvertes.has(partie) || partie === partieCourante;
 
-            {items.map((c) => {
-              const slug = slugDe(c.file);
-              const n = nbQuestions(slug);
-              return (
-                <NavLink
-                  key={c.file}
-                  to={`/cours/${slug}`}
-                  onClick={onNaviguer}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] leading-snug transition-colors ${
-                      isActive
-                        ? 'bg-encre-50 font-semibold text-encre-700 dark:bg-encre-500/15 dark:text-encre-300'
-                        : 'text-ardoise-600 hover:bg-ardoise-100 dark:text-ardoise-400 dark:hover:bg-ardoise-800'
-                    }`
-                  }
-                >
-                  <span className="flex-1">{c.title}</span>
-                  {n > 0 && (
-                    <span className="shrink-0 text-[11px] tabular-nums text-ardoise-400 dark:text-ardoise-500">
-                      {n}
-                    </span>
-                  )}
-                </NavLink>
-              );
-            })}
-          </div>
-        );
-      })}
+          return (
+            <Depliant
+              key={partie}
+              ouvert={ouvert}
+              onBasculer={() => basculer(partie)}
+              classeEntete={`${accent.texte} hover:bg-ardoise-100 dark:hover:bg-ardoise-800`}
+              titre={
+                <span className="flex items-center gap-2 text-[11px] font-bold tracking-wider uppercase">
+                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${accent.point}`} />
+                  <span className="truncate">{partie}</span>
+                </span>
+              }
+              indication={
+                <span className="shrink-0 text-[11px] tabular-nums text-ardoise-400 dark:text-ardoise-500">
+                  {items.length}
+                </span>
+              }
+            >
+              <div className="mt-0.5 mb-2 ml-[13px] border-l border-ardoise-200 pl-2 dark:border-ardoise-800">
+                {items.map((c) => {
+                  const slugChapitre = slugDe(c.file);
+                  const n = nbQuestions(slugChapitre);
+                  return (
+                    <NavLink
+                      key={c.file}
+                      to={`/cours/${slugChapitre}`}
+                      onClick={onNaviguer}
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] leading-snug transition-colors ${
+                          isActive
+                            ? 'bg-encre-50 font-semibold text-encre-700 dark:bg-encre-500/15 dark:text-encre-300'
+                            : 'text-ardoise-600 hover:bg-ardoise-100 dark:text-ardoise-400 dark:hover:bg-ardoise-800'
+                        }`
+                      }
+                    >
+                      <span className="flex-1">{c.title}</span>
+                      {n > 0 && (
+                        <span className="shrink-0 text-[11px] tabular-nums text-ardoise-400 dark:text-ardoise-500">
+                          {n}
+                        </span>
+                      )}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </Depliant>
+          );
+        })}
+      </div>
     </nav>
   );
 }

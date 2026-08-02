@@ -29,3 +29,15 @@ export const SLUG_TO_THEME: Record<string, Theme> = {
   '22-17-la-mise-en-production': 'mise-en-prod',
   '23-18-la-supervision-et-la-maintenance': 'supervision',
 };
+
+/**
+ * Thème -> chapitre où l'on s'entraîne dessus. Quand plusieurs chapitres
+ * partagent un thème, on retient le premier : c'est celui qui introduit la
+ * notion.
+ */
+export const THEME_TO_SLUG: Partial<Record<Theme, string>> = Object.entries(
+  SLUG_TO_THEME,
+).reduce<Partial<Record<Theme, string>>>((table, [slug, theme]) => {
+  table[theme] ??= slug;
+  return table;
+}, {});

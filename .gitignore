@@ -25,3 +25,14 @@ dist-ssr
 
 # Captures d écran de contrôle visuel
 apercu/
+
+# Outillage BYAN — local à la machine, ne fait pas partie du site
+.claude/
+.githooks/
+.mcp.json
+_byan/
+_byan-output/
+.byan-strict/
+.byan-leantime/
+.byan-tier/
+.byan-autobench/

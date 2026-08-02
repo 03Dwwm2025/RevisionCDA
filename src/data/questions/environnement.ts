@@ -191,4 +191,129 @@ ___3___
     explication:
       'Cet enchaînement est ce que doit décrire le README. Les dépendances viennent avant la configuration, et la base doit tourner avant qu’on puisse appliquer les migrations. Si une étape manque dans la documentation, elle se paie à chaque arrivée d’une nouvelle personne sur le projet.',
   },
+  {
+    id: 'env-013',
+    theme: 'environnement',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'Pourquoi distinguer les dépendances de développement des dépendances de production ?',
+    options: [
+      'Seules les secondes partent en production : l’image livrée reste légère et sa surface d’attaque réduite',
+      'Les premières sont payantes, les secondes gratuites',
+      'Les premières s’installent plus vite',
+      'La distinction est purement documentaire, sans effet réel',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Outils de test, analyseurs de code et cadriciels de construction n’ont rien à faire sur le serveur : ils alourdissent l’image et ajoutent des vulnérabilités potentielles sans servir à l’exécution. C’est aussi la raison d’être de la construction en deux étapes dans un Dockerfile.',
+  },
+  {
+    id: 'env-014',
+    theme: 'environnement',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Pourquoi faire tourner la base de données locale dans un conteneur plutôt que de l’installer sur sa machine ?',
+    options: [
+      'Toute l’équipe travaille sur la même version, et la base se recrée d’une commande',
+      'Un conteneur consomme moins de mémoire qu’une installation classique',
+      'Une base installée ne peut pas coexister avec une autre version',
+      'Le conteneur chiffre automatiquement les données',
+    ],
+    bonneReponse: 0,
+    explication:
+      'La version du moteur devient une ligne dans un fichier versionné : plus de « chez moi ça passe » lié à un écart de version. Repartir d’une base vide devient une commande, et faire cohabiter deux projets sur deux versions différentes ne pose plus de problème.',
+  },
+  {
+    id: 'env-015',
+    theme: 'environnement',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque outil de qualité à ce qu’il contrôle.',
+    paires: [
+      { gauche: 'Analyseur statique (linter)', droite: 'Les erreurs probables et les écarts aux règles de code' },
+      { gauche: 'Formateur automatique', droite: 'La mise en forme : indentation, guillemets, retours à la ligne' },
+      { gauche: 'Vérificateur de types', droite: 'La cohérence des types avant même l’exécution' },
+      { gauche: 'Analyse de sécurité du code', droite: 'Les motifs vulnérables : injections, secrets en dur' },
+    ],
+    explication:
+      'Ces quatre outils se complètent et se branchent tous dans l’intégration continue. Le formateur évite les débats de style et les diffs pollués par des changements d’indentation ; l’analyseur, lui, attrape de vrais défauts.',
+  },
+  {
+    id: 'env-016',
+    theme: 'environnement',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'Une bibliothèque publie une version majeure. Que t’indique ce seul numéro, avant même de lire les notes ?',
+    options: [
+      'Qu’elle contient au moins un changement incompatible : la mise à jour demande de vérifier le code appelant',
+      'Qu’elle corrige une faille de sécurité',
+      'Qu’elle est plus rapide que la précédente',
+      'Qu’elle abandonne les versions antérieures du langage',
+    ],
+    bonneReponse: 0,
+    explication:
+      'C’est la convention du versionnement sémantique : majeure pour une rupture, mineure pour un ajout compatible, correctif pour une correction. Elle ne dit rien de la qualité ni des performances — seulement du risque de casse, ce qui est déjà l’information la plus utile.',
+  },
+  {
+    id: 'env-017',
+    theme: 'environnement',
+    type: 'qcm',
+    difficulte: 1,
+    enonce: 'À quoi sert un client d’API comme Postman ou l’interface générée par la documentation ?',
+    options: [
+      'À appeler et tester les points d’entrée sans avoir besoin du front-end',
+      'À générer automatiquement le code du serveur',
+      'À remplacer les tests automatisés',
+      'À surveiller l’API une fois en production',
+    ],
+    bonneReponse: 0,
+    explication:
+      'On développe l’API et l’interface rarement en même temps : pouvoir appeler un point d’entrée seul, avec un jeton et un corps choisis, permet de valider le contrat avant que le front n’existe. Cela ne remplace pas les tests automatisés — c’est un outil d’exploration, pas de non-régression.',
+  },
+  {
+    id: 'env-018',
+    theme: 'environnement',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce:
+      'Un secret poussé par erreur puis supprimé par un commit suivant peut être considéré comme protégé.',
+    bonneReponse: false,
+    explication:
+      'Il reste dans l’historique, accessible à quiconque a le dépôt — et les robots qui scrutent les dépôts publics le trouvent en quelques minutes. La seule réponse correcte est de révoquer le secret et d’en générer un nouveau ; nettoyer l’historique ne vient qu’après.',
+  },
+  {
+    id: 'env-019',
+    theme: 'environnement',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'Comment garantir que toute l’équipe utilise la même version du moteur d’exécution du projet ?',
+    options: [
+      'La déclarer dans un fichier versionné du projet, lu par les outils et par l’intégration continue',
+      'L’indiquer dans le README et faire confiance',
+      'Demander à chacun d’installer la dernière version disponible',
+      'Laisser chacun choisir : le code est compatible de toute façon',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Chaque écosystème a son fichier de déclaration de version, lu par les gestionnaires de versions d’outils et par la CI. Un écart de version majeure entre une machine et le serveur produit des erreurs qui n’apparaissent qu’au déploiement — exactement ce qu’on cherche à éviter.',
+  },
+  {
+    id: 'env-020',
+    theme: 'environnement',
+    type: 'remettre_ordre',
+    difficulte: 2,
+    enonce: 'Remettez dans l’ordre la réaction à un signalement de vulnérabilité sur une dépendance.',
+    elements: [
+      'Le scan de dépendances signale la faille et sa gravité',
+      'Vérifier si le projet utilise réellement la partie vulnérable',
+      'Regarder la version corrigée proposée et son écart avec la version en place',
+      'Mettre à jour et lancer la suite de tests',
+      'Livrer le correctif, en priorisant selon la gravité',
+    ],
+    explication:
+      'L’étape la plus souvent sautée est la deuxième : toutes les failles signalées ne sont pas atteignables depuis le code du projet, et une gravité élevée sur une fonction jamais appelée ne justifie pas une livraison en urgence. Inversement, une faille exploitable à distance sur un composant exposé se traite le jour même.',
+  },
 ];

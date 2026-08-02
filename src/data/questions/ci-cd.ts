@@ -205,4 +205,114 @@ jobs:
     explication:
       'C’est la parade à OWASP A08, l’intégrité de la chaîne de livraison. Sans revue obligatoire, un seul compte compromis suffit à injecter du code jusqu’en production. Interdire aussi la poussée forcée empêche de réécrire l’historique pour masquer l’intrusion.',
   },
+  {
+    id: 'cicd-014',
+    theme: 'ci-cd',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'Un job construit l’application, un autre la déploie. Comment le second récupère-t-il le résultat du premier ?',
+    options: [
+      'Par un artefact publié à la fin du premier job et téléchargé par le second',
+      'Automatiquement : les jobs partagent le même disque',
+      'En relançant la construction dans le second job',
+      'Par une variable d’environnement',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Chaque job démarre sur une machine neuve : rien ne se transmet implicitement. On publie explicitement ce qui doit voyager — le dossier compilé, un rapport de tests — ou on passe par un registre d’images. Reconstruire dans le second job marche, mais double le temps et ne garantit pas un résultat identique.',
+  },
+  {
+    id: 'cicd-015',
+    theme: 'ci-cd',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Que gagne-t-on à mettre en cache les dépendances dans un pipeline ?',
+    options: [
+      'Du temps à chaque exécution, sans renoncer à l’installation stricte depuis le fichier de verrouillage',
+      'Un build plus fiable, car les versions ne changent plus',
+      'La possibilité de se passer du fichier de verrouillage',
+      'Une image finale plus légère',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Le cache est une optimisation de durée : la clé est calculée à partir du fichier de verrouillage, donc il se renouvelle dès que les dépendances changent. Il ne remplace pas le verrou, qui reste ce qui garantit la reproductibilité.',
+  },
+  {
+    id: 'cicd-016',
+    theme: 'ci-cd',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'Pourquoi exécuter la suite de tests sur plusieurs versions du moteur d’exécution dans un même pipeline ?',
+    options: [
+      'Pour détecter une incompatibilité avant la mise à jour du serveur',
+      'Pour accélérer l’exécution en répartissant les tests',
+      'Parce que les tests ne sont pas déterministes',
+      'Pour produire plusieurs artefacts de production',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Une exécution en matrice couvre les versions visées : celle du serveur aujourd’hui, et celle vers laquelle on veut migrer. La migration devient un fait mesuré plutôt qu’un pari, et la maintenance adaptative se prépare sans surprise.',
+  },
+  {
+    id: 'cicd-017',
+    theme: 'ci-cd',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce:
+      'Afficher une variable secrète dans les journaux du pipeline est sans risque, puisqu’ils sont privés.',
+    bonneReponse: false,
+    explication:
+      'Les journaux se partagent, s’exportent et sont souvent lisibles par toute personne ayant accès au dépôt. Les plateformes masquent les valeurs déclarées comme secrètes, mais ce masquage se contourne facilement — encoder la valeur suffit à la faire ressortir en clair. La règle : un secret n’est jamais affiché.',
+  },
+  {
+    id: 'cicd-018',
+    theme: 'ci-cd',
+    type: 'qcm',
+    difficulte: 3,
+    enonce:
+      'Un déploiement en production doit être validé par une personne avant de partir. Comment l’exprimer dans le pipeline ?',
+    options: [
+      'Par un environnement protégé, qui met le job en attente d’une approbation',
+      'En désactivant le job et en le relançant à la main',
+      'En commentant l’étape de déploiement dans le fichier de pipeline',
+      'En déployant systématiquement, puis en annulant si besoin',
+    ],
+    bonneReponse: 0,
+    explication:
+      'C’est la différence entre livraison continue et déploiement continu : l’artefact est prêt, la mise en production attend un accord. La plateforme trace qui a approuvé et quand — ce qui compte autant que le contrôle lui-même.',
+  },
+  {
+    id: 'cicd-019',
+    theme: 'ci-cd',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque déclencheur de pipeline à son usage.',
+    paires: [
+      { gauche: 'Modification poussée sur une branche de travail', droite: 'Construire et tester au plus tôt' },
+      { gauche: 'Demande de fusion ouverte', droite: 'Vérifier avant d’intégrer, sans accès aux secrets' },
+      { gauche: 'Fusion dans la branche principale', droite: 'Construire l’artefact et déployer' },
+      { gauche: 'Déclenchement périodique', droite: 'Rejouer les analyses de sécurité sur du code inchangé' },
+    ],
+    explication:
+      'Le déclenchement périodique est celui qu’on oublie : une dépendance devient vulnérable sans qu’une seule ligne du projet ne change, donc sans qu’aucun autre déclencheur ne se déclenche. Un passage hebdomadaire attrape ces cas.',
+  },
+  {
+    id: 'cicd-020',
+    theme: 'ci-cd',
+    type: 'qcm',
+    difficulte: 3,
+    enonce:
+      'Un pipeline met vingt minutes, et l’équipe a pris l’habitude de ne plus attendre son résultat. Quel est le vrai problème ?',
+    options: [
+      'La boucle de retour est cassée : un pipeline qu’on n’attend plus ne protège plus de rien',
+      'Le coût des machines d’exécution',
+      'Le nombre d’étapes du pipeline',
+      'La taille du dépôt',
+    ],
+    bonneReponse: 0,
+    explication:
+      'La valeur d’une intégration continue tient à la rapidité du retour. Passé quelques minutes, on enchaîne sur autre chose et on découvre l’échec bien plus tard, sur un code qu’on a déjà quitté. Les leviers : paralléliser les jobs, mettre en cache les dépendances, et réserver les tests lents à un passage séparé.',
+  },
 ];

@@ -11,7 +11,7 @@ import type { NomIcone } from './Icone';
 
 interface Props {
   chapitres: ChapitreIndex[];
-  nbErreurs: number;
+  nbARevoir: number;
   onNaviguer?: () => void;
 }
 
@@ -61,7 +61,7 @@ function LienPrincipal({
   );
 }
 
-export default function Sidebar({ chapitres, nbErreurs, onNaviguer }: Props) {
+export default function Sidebar({ chapitres, nbARevoir, onNaviguer }: Props) {
   const { slug } = useParams<{ slug: string }>();
 
   const parParties = useMemo(() => {
@@ -91,12 +91,13 @@ export default function Sidebar({ chapitres, nbErreurs, onNaviguer }: Props) {
       aria-label="Navigation du cours"
     >
       <LienPrincipal to="/" icone="accueil" libelle="Accueil" onNaviguer={onNaviguer} />
+      <LienPrincipal to="/recherche" icone="cible" libelle="Rechercher" onNaviguer={onNaviguer} />
       <LienPrincipal to="/examen" icone="chrono" libelle="Mode examen" onNaviguer={onNaviguer} />
       <LienPrincipal
-        to="/erreurs"
+        to="/revision"
         icone="rejouer"
-        libelle="Mes erreurs"
-        badge={nbErreurs}
+        libelle="À revoir"
+        badge={nbARevoir}
         onNaviguer={onNaviguer}
       />
 

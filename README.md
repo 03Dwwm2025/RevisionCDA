@@ -7,9 +7,11 @@ Deux usages : lire le cours découpé par chapitre, et s'entraîner sur des sér
 ## Ce qu'il y a dedans
 
 - **26 chapitres** couvrant les trois blocs de compétences du référentiel : conception, développement, déploiement — avec la sécurité traitée à chaque étape.
-- **344 questions** réparties sur 17 thèmes, dans cinq formats : choix multiple, vrai/faux, association, complétion de code et remise en ordre.
-- **Trois modes d'entraînement** : série par thème, examen blanc (25 questions tirées de façon équilibrée entre les thèmes, 30 minutes), et rattrapage des questions déjà ratées.
-- **Progression mémorisée** dans le navigateur : dernier score par thème et liste des erreurs à rejouer.
+- **393 questions** réparties sur 17 thèmes, dans cinq formats : choix multiple, vrai/faux, association, complétion de code et remise en ordre.
+- **Trois modes d'entraînement** : série par thème, examen blanc (25 questions tirées de façon équilibrée entre les thèmes, 30 minutes), et révision espacée des questions déjà ratées.
+- **Révision espacée** : une question ratée revient demain, puis à 3 jours, 1 semaine, 3 semaines. Une erreur la ramène au début ; réussie à chaque passage, elle finit par être acquise.
+- **Recherche plein texte** dans les 26 chapitres, section par section — raccourci `/` ou `Ctrl+K`.
+- **Progression mémorisée** dans le navigateur : dernier score et tendance par thème, chapitre en cours de lecture, paquet de révision.
 
 ## Démarrer
 
@@ -39,24 +41,25 @@ src/
   components/            Mise en page, navigation, icônes
   components/quiz/       Moteur de quiz et les cinq types de question
   data/questions/        Les questions, un fichier par thème
-  hooks/                 Chargement du cours, progression, thème clair/sombre
-  pages/                 Accueil, lecture, quiz par thème, examen, erreurs
+  hooks/                 Cours, progression, thème clair/sombre, sections repliables
+  pages/                 Accueil, lecture, quiz, examen, révision, recherche
   types/                 Modèle de données du cours et des questions
-  utils/                 Mélange, tirage stratifié, accents de partie
+  utils/                 Mélange, tirage stratifié, révision espacée, recherche
 ```
 
 ## Ajouter du contenu
 
 **Un chapitre** : déposer le fichier `.md` dans `cours/`, puis l'ajouter à `cours/index.json` avec son titre et sa partie. Pour proposer un quiz en fin de chapitre, ajouter une entrée dans `src/data/questions/chapitres.ts`.
 
-**Des questions** : les ajouter au fichier du thème dans `src/data/questions/`, puis mettre à jour `src/data/questions/compte.ts`. La suite de tests vérifie l'intégrité des données à chaque exécution :
+**Des questions** : les ajouter au fichier du thème dans `src/data/questions/`, puis mettre à jour `src/data/questions/compte.ts`. Une règle tient tout le lot : **ce que la question demande** (énoncé, options, paires, code à trous, éléments à ordonner) doit être répondable par un développeur Java, Python, PHP, JavaScript ou C# — l'explication, elle, peut citer des syntaxes concrètes. La suite de tests vérifie l'intégrité des données à chaque exécution :
 
 - identifiants uniques, thème cohérent, énoncé et explication non vides ;
 - choix multiples : au moins trois options distinctes, bonne réponse dans les bornes ;
 - associations : aucun terme ni définition en double ;
 - complétion de code : trous numérotés de 1 à N, une réponse par trou, réponses présentes dans les choix, au moins un distracteur, et question résoluble ;
 - remise en ordre : au moins trois éléments distincts ;
-- compteurs de la navigation synchronisés avec les données réelles.
+- compteurs de la navigation synchronisés avec les données réelles ;
+- aucun verrou technologique dans la partie évaluée d'une question.
 
 Un `npm test` avant de commiter suffit à attraper les erreurs de saisie.
 

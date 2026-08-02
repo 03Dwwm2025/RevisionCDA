@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useLocation, Link } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Icone from './Icone';
 import { useCoursIndex } from '../hooks/useCours';
@@ -42,14 +42,34 @@ function Marque() {
 
 export default function Layout() {
   const { chapitres } = useCoursIndex();
-  const { erreurs } = useProgression();
+  const { aRevoir } = useProgression();
   const [menuOuvert, setMenuOuvert] = useState(false);
   const { pathname } = useLocation();
+  const naviguer = useNavigate();
 
   // Le contenu principal remonte en haut à chaque changement de page.
   useEffect(() => {
     document.getElementById('contenu')?.scrollTo({ top: 0 });
   }, [pathname]);
+
+  // Raccourci de recherche : « / » ou Ctrl+K, sauf quand on est déjà en train
+  // de saisir quelque part.
+  useEffect(() => {
+    const surTouche = (e: KeyboardEvent) => {
+      const cible = e.target as HTMLElement | null;
+      const dansUnChamp =
+        cible?.tagName === 'INPUT' || cible?.tagName === 'TEXTAREA' || cible?.isContentEditable;
+
+      const raccourci = e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k');
+      if (!raccourci || dansUnChamp) return;
+
+      e.preventDefault();
+      naviguer('/recherche');
+    };
+
+    window.addEventListener('keydown', surTouche);
+    return () => window.removeEventListener('keydown', surTouche);
+  }, [naviguer]);
 
   useEffect(() => {
     if (!menuOuvert) return;
@@ -79,7 +99,7 @@ export default function Layout() {
       <div className="min-h-0 flex-1">
         <Sidebar
           chapitres={chapitres}
-          nbErreurs={erreurs.length}
+          nbARevoir={aRevoir.length}
           onNaviguer={() => setMenuOuvert(false)}
         />
       </div>

@@ -6,9 +6,11 @@ import { SLUG_TO_THEME, THEME_TO_SLUG } from '../data/questions/chapitres';
 import { NB_QUESTIONS_PAR_THEME, NB_QUESTIONS_TOTAL } from '../data/questions/compte';
 import { THEMES, THEME_LABELS } from '../types/quiz';
 import type { ScoreTheme } from '../types/quiz';
+import type { Essai } from '../hooks/useProgression';
 import type { ChapitreIndex } from '../types/cours';
 import { accentPartie } from '../utils/parties';
 import { ilYA } from '../utils/dates';
+import { prochaineEcheance } from '../utils/leitner';
 import Depliant from '../components/Depliant';
 import Icone from '../components/Icone';
 
@@ -53,7 +55,33 @@ function Bloc({
   );
 }
 
-function LigneTheme({ score }: { score: ScoreTheme }) {
+/** Écart en points entre les deux derniers passages sur un thème. */
+function Tendance({ essais }: { essais: Essai[] }) {
+  if (essais.length < 2) return null;
+
+  const [avant, apres] = essais.slice(-2);
+  const ecart = Math.round((apres.score / apres.total - avant.score / avant.total) * 100);
+
+  if (ecart === 0) {
+    return <span className="text-xs text-ardoise-400 tabular-nums dark:text-ardoise-500">=</span>;
+  }
+
+  return (
+    <span
+      title={`${essais.length} passages enregistrés`}
+      className={`text-xs font-semibold tabular-nums ${
+        ecart > 0
+          ? 'text-emerald-600 dark:text-emerald-400'
+          : 'text-rose-600 dark:text-rose-400'
+      }`}
+    >
+      {ecart > 0 ? '+' : '−'}
+      {Math.abs(ecart)}
+    </span>
+  );
+}
+
+function LigneTheme({ score, essais }: { score: ScoreTheme; essais: Essai[] }) {
   const p = pourcent(score);
   const couleurs = teinte(p);
   const slug = THEME_TO_SLUG[score.theme];
@@ -66,6 +94,10 @@ function LigneTheme({ score }: { score: ScoreTheme }) {
 
       <span className={`w-10 shrink-0 text-sm font-bold tabular-nums ${couleurs.texte}`}>
         {p} %
+      </span>
+
+      <span className="w-8 shrink-0 text-right">
+        <Tendance essais={essais} />
       </span>
 
       <div className="hidden h-1.5 flex-1 overflow-hidden rounded-full bg-ardoise-200 sm:block dark:bg-ardoise-800">
@@ -86,7 +118,7 @@ function LigneTheme({ score }: { score: ScoreTheme }) {
 
 export default function Accueil() {
   const { chapitres, loading } = useCoursIndex();
-  const { scores, erreurs, derniereLecture } = useProgression();
+  const { scores, historique, paquet, aRevoir, derniereLecture } = useProgression();
   const [programmeOuvert, basculerProgramme] = useDepliant('revision-cda-accueil-programme');
 
   if (loading) {
@@ -105,6 +137,8 @@ export default function Accueil() {
     .slice(0, NB_SUGGESTIONS);
 
   const jamaisTestes = THEMES.filter((t) => !scores[t]);
+  const taillePaquet = Object.keys(paquet).length;
+  const echeance = prochaineEcheance(paquet);
   const debut = testes.length === 0 && !derniereLecture;
 
   const groupes = new Map<string, ChapitreIndex[]>();
@@ -193,27 +227,36 @@ export default function Accueil() {
         >
           <div className="carte divide-y divide-ardoise-200 dark:divide-ardoise-800">
             {aRetravailler.map((s) => (
-              <LigneTheme key={s.theme} score={s} />
+              <LigneTheme key={s.theme} score={s} essais={historique[s.theme] ?? []} />
             ))}
           </div>
         </Bloc>
       )}
 
-      {erreurs.length > 0 && (
-        <Bloc titre="Mes erreurs">
-          <Link
-            to="/erreurs"
-            className="carte carte-cliquable flex items-center gap-4 p-4"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400">
-              <Icone nom="rejouer" className="h-4 w-4" />
+      {taillePaquet > 0 && (
+        <Bloc titre="Révision espacée" indication={`${taillePaquet} question${taillePaquet > 1 ? 's' : ''} suivie${taillePaquet > 1 ? 's' : ''}`}>
+          <Link to="/revision" className="carte carte-cliquable flex items-center gap-4 p-4">
+            <span
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                aRevoir.length > 0
+                  ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400'
+                  : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400'
+              }`}
+            >
+              <Icone nom={aRevoir.length > 0 ? 'rejouer' : 'coche'} className="h-4 w-4" />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block font-semibold text-ardoise-900 dark:text-ardoise-100">
-                {erreurs.length} question{erreurs.length > 1 ? 's' : ''} à rejouer
+                {aRevoir.length > 0
+                  ? `${aRevoir.length} question${aRevoir.length > 1 ? 's' : ''} à revoir aujourd’hui`
+                  : 'Rien à revoir aujourd’hui'}
               </span>
               <span className="block text-xs text-ardoise-500 dark:text-ardoise-400">
-                Une question réussie sort de la liste
+                {aRevoir.length > 0
+                  ? 'Une réponse juste repousse la question ; une erreur la ramène à demain'
+                  : echeance
+                    ? `Prochaine échéance le ${new Date(`${echeance}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+                    : 'Le paquet est à jour'}
               </span>
             </span>
             <Icone nom="droite" className="h-5 w-5 shrink-0 text-ardoise-400" />

@@ -184,4 +184,142 @@ service = nouveau ServiceConges(nouveau DepotEnMemoire())`,
     explication:
       'SRP garantit que la classe fait une seule chose → test focalisé. DIP garantit que les dépendances sont des interfaces → on peut injecter un `FakeRepository` en test sans toucher à la BDD. Si une classe est difficile à tester, c\'est souvent le signe d\'une violation de SRP ou DIP.',
   },
+  {
+    id: 'solid-012',
+    theme: 'solid',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'Une classe s’appelle `GestionnaireUtilisateur` et compte 900 lignes. Quel principe est le plus directement mis en cause ?',
+    options: [
+      'La responsabilité unique : le nom vague trahit une classe qui fait plusieurs métiers',
+      'L’inversion des dépendances : la classe est trop concrète',
+      'La substitution de Liskov : la classe est trop grande pour être héritée',
+      'Aucun : la taille d’une classe n’est pas un critère',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Un nom qu’on ne peut pas rendre plus précis (« gestionnaire », « manager », « helper », « utils ») signale en général une classe qui a absorbé plusieurs responsabilités. Le test : essayer de la décrire en une phrase sans « et ». Si c’est impossible, il y a plusieurs raisons de la modifier, donc plusieurs classes.',
+  },
+  {
+    id: 'solid-013',
+    theme: 'solid',
+    type: 'qcm',
+    difficulte: 3,
+    enonce:
+      'Chaque ajout d’un nouveau type de document oblige à modifier la même longue suite de conditions. Quel principe est violé, et quelle est la parade ?',
+    options: [
+      'Ouvert/fermé : remplacer les conditions par un contrat que chaque type implémente',
+      'Responsabilité unique : découper la fonction en plusieurs fonctions plus courtes',
+      'Ségrégation des interfaces : créer une interface par type de document',
+      'Inversion des dépendances : injecter la liste des types dans la fonction',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Le symptôme est le code existant qu’on rouvre à chaque ajout, avec le risque de régression qui va avec. Remplacer la suite de conditions par un contrat rend l’ajout purement additif : une nouvelle classe, et pas une ligne modifiée dans le code déjà testé.',
+  },
+  {
+    id: 'solid-014',
+    theme: 'solid',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce:
+      'Une classe fille peut renforcer les conditions d’entrée d’une méthode héritée sans casser le principe de substitution de Liskov.',
+    bonneReponse: false,
+    explication:
+      'Exiger davantage que le parent casse le contrat : un code qui fonctionnait avec le parent échoue avec l’enfant. La règle est l’inverse — une classe fille peut accepter plus large en entrée et garantir plus strict en sortie, mais pas le contraire.',
+  },
+  {
+    id: 'solid-015',
+    theme: 'solid',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'Quel signe indique qu’un contrat est trop large et devrait être découpé ?',
+    options: [
+      'Des classes l’implémentent en laissant certaines méthodes vides ou en levant une erreur',
+      'Le contrat compte plus de deux méthodes',
+      'Plusieurs classes implémentent le même contrat',
+      'Le contrat est utilisé par la couche métier',
+    ],
+    bonneReponse: 0,
+    explication:
+      'C’est le signal de la ségrégation des interfaces : une classe forcée d’implémenter ce qu’elle ne sait pas faire annonce un contrat fourre-tout. Le nombre de méthodes n’est pas le critère — un contrat de cinq méthodes cohérentes est parfaitement sain.',
+  },
+  {
+    id: 'solid-016',
+    theme: 'solid',
+    type: 'association',
+    difficulte: 3,
+    enonce: 'Associez chaque symptôme dans le code au principe SOLID qu’il met en défaut.',
+    paires: [
+      { gauche: 'Une classe qui change pour trois raisons différentes', droite: 'Responsabilité unique' },
+      { gauche: 'Une suite de conditions rallongée à chaque nouveau cas', droite: 'Ouvert/fermé' },
+      { gauche: 'Une méthode redéfinie pour lever « non supporté »', droite: 'Substitution de Liskov' },
+      { gauche: 'Une classe qui construit elle-même sa connexion à la base', droite: 'Inversion des dépendances' },
+    ],
+    explication:
+      'Les principes se repèrent mieux par leurs symptômes que par leur définition. En entretien, savoir citer le symptôme et la correction vaut bien plus que réciter les cinq intitulés.',
+  },
+  {
+    id: 'solid-017',
+    theme: 'solid',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'En quoi le respect de SOLID facilite-t-il concrètement l’écriture des tests ?',
+    options: [
+      'Les dépendances étant reçues et non créées, on peut les remplacer par des doublures',
+      'Le code SOLID contient automatiquement moins de bugs',
+      'Les principes imposent d’écrire les tests avant le code',
+      'Une classe SOLID n’a pas besoin d’être testée',
+    ],
+    bonneReponse: 0,
+    explication:
+      'C’est le lien le plus tangible entre SOLID et le quotidien : une classe qui reçoit ses collaborateurs se teste sans base de données ni réseau. À l’inverse, une classe qui instancie elle-même ses dépendances est intestable sans monter toute l’infrastructure.',
+  },
+  {
+    id: 'solid-018',
+    theme: 'solid',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Que dit le principe DRY, et quelle est son erreur d’interprétation courante ?',
+    options: [
+      'Éviter la duplication de connaissance ; l’erreur est de factoriser deux codes qui se ressemblent par hasard',
+      'Éviter la duplication de lignes ; toute répétition doit être factorisée',
+      'Éviter d’écrire deux fois la même fonctionnalité dans deux projets',
+      'Éviter les commentaires qui répètent ce que dit le code',
+    ],
+    bonneReponse: 0,
+    explication:
+      'DRY porte sur la connaissance, pas sur les caractères. Deux règles métier distinctes qui s’écrivent pareil aujourd’hui vont diverger demain : les avoir fusionnées oblige alors à ajouter un paramètre, puis une condition, et on obtient une fonction plus complexe que les deux d’origine.',
+  },
+  {
+    id: 'solid-019',
+    theme: 'solid',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce:
+      'Le principe YAGNI invite à écrire dès maintenant les points d’extension dont on aura probablement besoin plus tard.',
+    bonneReponse: false,
+    explication:
+      'YAGNI dit exactement l’inverse : on n’écrit pas ce dont on n’a pas besoin aujourd’hui. Une abstraction ajoutée « au cas où » est du code à maintenir et à tester pour un besoin hypothétique — et quand le vrai besoin arrive, il ressemble rarement à ce qu’on avait prévu.',
+  },
+  {
+    id: 'solid-020',
+    theme: 'solid',
+    type: 'qcm',
+    difficulte: 3,
+    enonce:
+      'Appliquer SOLID à la lettre sur un petit projet produit parfois un résultat pire. Pourquoi ?',
+    options: [
+      'Chaque abstraction ajoute une indirection : trop d’indirections rendent le code difficile à suivre',
+      'Les principes sont incompatibles entre eux',
+      'Les cadriciels modernes les appliquent déjà automatiquement',
+      'Les principes ne valent que pour les langages compilés',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Les principes servent à absorber le changement. Là où le changement n’arrive pas, l’abstraction ne coûte que de la lecture : trois fichiers et une interface pour une classe utilisée à un seul endroit. Le rasoir d’Ockham s’applique aussi aux principes de conception.',
+  },
 ];

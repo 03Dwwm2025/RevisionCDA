@@ -8,7 +8,8 @@ import Accueil from './pages/Accueil';
 const LectureChapitre = lazy(() => import('./pages/LectureChapitre'));
 const QuizTheme = lazy(() => import('./pages/QuizTheme'));
 const ModeExamen = lazy(() => import('./pages/ModeExamen'));
-const RevisionErreurs = lazy(() => import('./pages/RevisionErreurs'));
+const Revision = lazy(() => import('./pages/Revision'));
+const Recherche = lazy(() => import('./pages/Recherche'));
 
 function Attente() {
   return <div className="flex h-64 items-center justify-center text-ardoise-400">Chargement…</div>;
@@ -24,7 +25,10 @@ export default function App() {
             <Route path="cours/:slug" element={<LectureChapitre />} />
             <Route path="quiz/:slug" element={<QuizTheme />} />
             <Route path="examen" element={<ModeExamen />} />
-            <Route path="erreurs" element={<RevisionErreurs />} />
+            <Route path="revision" element={<Revision />} />
+            <Route path="recherche" element={<Recherche />} />
+            {/* Ancienne adresse, conservée pour les liens déjà enregistrés. */}
+            <Route path="erreurs" element={<Revision />} />
           </Route>
         </Routes>
       </Suspense>

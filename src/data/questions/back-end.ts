@@ -204,4 +204,112 @@ export const questionsBackEnd: Question[] = [
     explication:
       'La validation répond à « cette donnée est-elle bien formée ? » — champ présent, adresse e-mail plausible, longueur respectée. Elle ne dépend que de la donnée elle-même. Une règle de gestion répond à « cette opération est-elle permise ? » — solde suffisant, pas de chevauchement de dates — et exige de consulter d’autres données. C’est pour ça qu’elle vit dans la couche métier, pas sur le modèle d’entrée.',
   },
+  {
+    id: 'back-014',
+    theme: 'back-end',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'Déduire un solde et créer une demande sont deux écritures qui doivent réussir ensemble ou pas du tout. Comment le garantir ?',
+    options: [
+      'Les placer dans une même transaction, validée à la fin ou annulée en bloc',
+      'Les exécuter l’une après l’autre et vérifier le résultat de chacune',
+      'Rejouer la seconde écriture en cas d’échec',
+      'Les exécuter en parallèle pour réduire la fenêtre d’incohérence',
+    ],
+    bonneReponse: 0,
+    explication:
+      'C’est l’atomicité, le A d’ACID. Vérifier après coup laisse une fenêtre où le solde est débité sans demande : si le serveur tombe entre les deux écritures, la base reste incohérente. La transaction déplace cette garantie du code vers le moteur.',
+  },
+  {
+    id: 'back-015',
+    theme: 'back-end',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'À quoi sert une limitation de débit sur les points d’entrée d’authentification ?',
+    options: [
+      'À ralentir les tentatives automatisées de découverte de mot de passe',
+      'À réduire la charge de la base de données',
+      'À éviter que deux utilisateurs se connectent en même temps',
+      'À imposer un mot de passe plus long',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Sans elle, un attaquant enchaîne des milliers d’essais à la seconde. En limitant à quelques tentatives par minute et par adresse, une attaque par force brute devient inexploitable. C’est l’une des parades attendues sur le risque d’identification et d’authentification défaillantes.',
+  },
+  {
+    id: 'back-016',
+    theme: 'back-end',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'À quoi sert un point d’entrée de santé exposé par l’application ?',
+    options: [
+      'À permettre au superviseur et à l’orchestrateur de savoir si l’instance répond et peut recevoir du trafic',
+      'À afficher les statistiques d’usage aux administrateurs',
+      'À redémarrer l’application à distance',
+      'À vider le cache applicatif',
+    ],
+    bonneReponse: 0,
+    explication:
+      'On distingue souvent deux sondes : « le processus est-il vivant » et « est-il prêt à servir », cette dernière vérifiant les dépendances comme la base. C’est ce qui permet de ne pas router de trafic vers une instance qui démarre encore, et de redémarrer automatiquement une instance bloquée.',
+  },
+  {
+    id: 'back-017',
+    theme: 'back-end',
+    type: 'qcm',
+    difficulte: 3,
+    enonce:
+      'Une opération lente (génération d’un document, envoi de courriels en masse) est déclenchée par une requête HTTP. Quelle réponse renvoyer ?',
+    options: [
+      'Un 202, en confiant le travail à une file de traitement, avec un moyen de suivre l’avancement',
+      'Un 200, après avoir attendu la fin du traitement',
+      'Un 500 si le traitement dépasse le délai imparti',
+      'Un 204, puisqu’il n’y a rien à renvoyer',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Faire attendre la requête bloque une connexion, expose au dépassement de délai du serveur frontal et laisse l’utilisateur devant une page figée. Le 202 signale une demande acceptée mais pas terminée : le traitement part en tâche de fond, et le client interroge l’avancement.',
+  },
+  {
+    id: 'back-018',
+    theme: 'back-end',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque type de tâche de fond à son déclencheur.',
+    paires: [
+      { gauche: 'Tâche planifiée', droite: 'Une heure ou une périodicité : sauvegarde nocturne, purge des journaux' },
+      { gauche: 'File de traitement', droite: 'Un message déposé par l’application : envoi d’un courriel, génération d’un export' },
+      { gauche: 'Traitement par lots', droite: 'Un volume de données à traiter en une passe, hors des heures de charge' },
+    ],
+    explication:
+      'Sortir ces traitements du cycle de la requête garde l’API rapide et permet de réessayer en cas d’échec sans que l’utilisateur ne soit concerné. La file apporte en plus la reprise sur erreur : un message non traité reste en attente au lieu d’être perdu.',
+  },
+  {
+    id: 'back-019',
+    theme: 'back-end',
+    type: 'vrai_faux',
+    difficulte: 3,
+    enonce:
+      'Mettre en cache une réponse coûteuse à calculer dispense de réfléchir à sa durée de validité.',
+    bonneReponse: false,
+    explication:
+      'La question difficile du cache n’est pas de le remplir, c’est de savoir quand le vider. Une donnée périmée servie longtemps est parfois pire que la lenteur qu’on voulait corriger. On décide donc explicitement d’une durée de vie, ou d’un événement qui invalide l’entrée.',
+  },
+  {
+    id: 'back-020',
+    theme: 'back-end',
+    type: 'qcm',
+    difficulte: 3,
+    enonce:
+      'Deux requêtes simultanées lisent le même solde puis le décrémentent chacune. Le solde final est faux. Comment l’éviter ?',
+    options: [
+      'Encadrer lecture et écriture dans une transaction avec le niveau d’isolation adapté, ou verrouiller la ligne concernée',
+      'Ajouter un délai aléatoire avant chaque écriture',
+      'Recalculer le solde après coup et le corriger',
+      'Interdire les requêtes simultanées sur l’API',
+    ],
+    bonneReponse: 0,
+    explication:
+      'C’est une mise à jour perdue : chacune lit la même valeur de départ et écrase l’autre. Le I d’ACID, l’isolation, existe exactement pour ça. En pratique on lit la ligne en la verrouillant, ou on écrit une mise à jour relative — retirer dix plutôt qu’écrire une valeur calculée en mémoire.',
+  },
 ];

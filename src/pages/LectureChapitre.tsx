@@ -1,23 +1,38 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useLocation, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useChapitre, useCoursIndex } from '../hooks/useCours';
 import { useProgression } from '../hooks/useProgression';
 import { QUESTIONS_BY_THEME, SLUG_TO_THEME } from '../data/questions';
 import { accentPartie } from '../utils/parties';
+import { ancre } from '../utils/recherche';
 import Icone from '../components/Icone';
 
 function slugDe(file: string) {
   return file.replace(/\.md$/, '');
 }
 
-/** Les tableaux du cours sont larges : ils défilent dans leur propre conteneur. */
+/** Aplatit les enfants d'un titre pour en dériver une ancre. */
+function texteDe(noeud: React.ReactNode): string {
+  if (typeof noeud === 'string' || typeof noeud === 'number') return String(noeud);
+  if (Array.isArray(noeud)) return noeud.map(texteDe).join('');
+  if (noeud && typeof noeud === 'object' && 'props' in noeud) {
+    return texteDe((noeud as { props: { children?: React.ReactNode } }).props.children);
+  }
+  return '';
+}
+
 const COMPOSANTS_MARKDOWN = {
+  // Les tableaux du cours sont larges : ils défilent dans leur propre conteneur.
   table: ({ children }: { children?: React.ReactNode }) => (
     <div className="table-wrap">
       <table>{children}</table>
     </div>
+  ),
+  // Chaque section porte une ancre : la recherche peut ouvrir le chapitre au bon endroit.
+  h3: ({ children }: { children?: React.ReactNode }) => (
+    <h3 id={ancre(texteDe(children))}>{children}</h3>
   ),
 };
 
@@ -74,6 +89,14 @@ export default function LectureChapitre() {
   const theme = slug ? SLUG_TO_THEME[slug] : undefined;
   const nbQuestions = theme ? (QUESTIONS_BY_THEME[theme]?.length ?? 0) : 0;
   const accent = accentPartie(meta?.part);
+
+  // Le contenu arrive après le premier rendu : le navigateur ne peut pas sauter
+  // tout seul vers l'ancre demandée, on le fait une fois le markdown affiché.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!contenu || !hash) return;
+    document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView({ block: 'start' });
+  }, [contenu, hash]);
 
   // Mémorise le chapitre pour proposer de reprendre la lecture depuis l'accueil.
   const { enregistrerLecture } = useProgression();

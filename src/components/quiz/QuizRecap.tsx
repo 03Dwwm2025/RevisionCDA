@@ -100,7 +100,7 @@ export default function QuizRecap({ questions, resultats, retour, onRejouer, tem
           </p>
           {erreurs.length > 0 && (
             <p className="mt-3 text-sm text-ardoise-500 dark:text-ardoise-400">
-              Les questions ratées sont ajoutées à « Mes erreurs » pour être rejouées.
+              Les questions ratées entrent en révision espacée : elles reviendront demain, puis de plus en plus tard.
             </p>
           )}
         </div>
@@ -116,9 +116,9 @@ export default function QuizRecap({ questions, resultats, retour, onRejouer, tem
           {retour.libelle}
         </Link>
         {erreurs.length > 0 && (
-          <Link to="/erreurs" className="btn btn-secondaire">
+          <Link to="/revision" className="btn btn-secondaire">
             <Icone nom="cible" className="h-4 w-4" />
-            Rejouer mes erreurs
+            Ma révision
           </Link>
         )}
       </div>

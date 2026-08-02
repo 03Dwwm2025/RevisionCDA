@@ -203,4 +203,129 @@ function validerFormulaire(email, mdp) {
     explication:
       'La regex email valide la structure `user@domain.ext`. Le flag `i` rend la comparaison insensible à la casse. `.test(string)` retourne `true` ou `false`. La regex du MDP utilise des lookaheads `(?=...)` pour vérifier des conditions indépendantes (majuscule ET chiffre AND longueur ≥ 8).',
   },
+  {
+    id: 'front-015',
+    theme: 'front-end',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'Pourquoi préférer une balise `<button>` à une `<div>` rendue cliquable par un écouteur d’événement ?',
+    options: [
+      'Le bouton est atteignable au clavier, annoncé comme tel par un lecteur d’écran et activable par Entrée ou Espace',
+      'Le bouton se met en forme plus facilement',
+      'La `<div>` ne peut pas recevoir d’écouteur de clic',
+      'Le bouton déclenche l’envoi du formulaire plus rapidement',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Tout cela est gratuit avec l’élément natif, et coûte plusieurs attributs et écouteurs à reproduire sur une `<div>` — attribut de rôle, index de tabulation, gestion des touches. C’est le premier critère d’accessibilité : utiliser l’élément prévu pour l’usage.',
+  },
+  {
+    id: 'front-016',
+    theme: 'front-end',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'Quand choisir une disposition en grille plutôt qu’en boîte flexible ?',
+    options: [
+      'Quand la mise en page se pense sur deux axes à la fois, lignes et colonnes',
+      'Quand il y a plus de cinq éléments à placer',
+      'Quand la page doit s’adapter aux mobiles',
+      'Quand les éléments ont des hauteurs différentes',
+    ],
+    bonneReponse: 0,
+    explication:
+      'La boîte flexible distribue sur un seul axe : une barre d’actions, une liste. La grille pose un gabarit à deux dimensions : une barre latérale et un contenu, une galerie alignée. Les deux s’adaptent au mobile — ce n’est pas le critère de choix.',
+  },
+  {
+    id: 'front-017',
+    theme: 'front-end',
+    type: 'association',
+    difficulte: 2,
+    enonce: 'Associez chaque moyen de stockage côté navigateur à son usage.',
+    paires: [
+      { gauche: 'localStorage', droite: 'Données persistantes entre les visites, accessibles en JavaScript' },
+      { gauche: 'sessionStorage', droite: 'Données effacées à la fermeture de l’onglet' },
+      { gauche: 'Cookie', droite: 'Envoyé automatiquement au serveur à chaque requête' },
+      { gauche: 'Cookie HttpOnly', droite: 'Illisible en JavaScript : adapté à un jeton de session' },
+    ],
+    explication:
+      'La différence qui compte pour la sécurité est l’accessibilité au script : tout ce que JavaScript peut lire, une faille de type injection de script peut le voler. Le cookie marqué inaccessible au script est le seul moyen de stocker un jeton hors de portée d’un tel vol.',
+  },
+  {
+    id: 'front-018',
+    theme: 'front-end',
+    type: 'qcm',
+    difficulte: 2,
+    enonce:
+      'Un appel réseau renvoie un code 404. Le bloc `catch` de votre fonction asynchrone est-il déclenché ?',
+    options: [
+      'Non : une réponse reçue est un succès réseau, il faut tester explicitement le code de statut',
+      'Oui : tout code différent de 200 déclenche une erreur',
+      'Oui, mais seulement pour les codes 5xx',
+      'Cela dépend du navigateur',
+    ],
+    bonneReponse: 0,
+    explication:
+      'C’est le piège classique de l’API `fetch` : elle ne rejette que sur un échec réseau — serveur injoignable, délai dépassé, requête bloquée. Une réponse 404 ou 500 est une réponse valide du point de vue du réseau. Il faut tester le drapeau de succès ou le code de statut avant de lire le corps.',
+  },
+  {
+    id: 'front-019',
+    theme: 'front-end',
+    type: 'qcm',
+    difficulte: 2,
+    enonce: 'À quoi sert l’attribut `alt` d’une image, au-delà de l’accessibilité ?',
+    options: [
+      'Il s’affiche quand l’image ne charge pas et sert au référencement',
+      'Il définit la taille de repli de l’image',
+      'Il précise le format du fichier',
+      'Il déclenche le chargement différé',
+    ],
+    bonneReponse: 0,
+    explication:
+      'Une image décorative prend un attribut vide pour que le lecteur d’écran l’ignore ; une image porteuse d’information décrit ce qu’elle montre. C’est un critère du référentiel d’accessibilité, et l’un des plus faciles à respecter.',
+  },
+  {
+    id: 'front-020',
+    theme: 'front-end',
+    type: 'vrai_faux',
+    difficulte: 2,
+    enonce:
+      'La validation par les attributs HTML d’un formulaire dispense de valider côté serveur.',
+    bonneReponse: false,
+    explication:
+      'Elle améliore le confort : le navigateur signale l’erreur avant l’envoi, sans aller-retour réseau. Mais elle se contourne en désactivant JavaScript ou en appelant l’API directement. La règle ne bouge pas : la validation côté client est du confort, celle du serveur est la sécurité.',
+  },
+  {
+    id: 'front-021',
+    theme: 'front-end',
+    type: 'qcm',
+    difficulte: 3,
+    enonce:
+      'Pourquoi placer les points de rupture d’une mise en page en partant du mobile plutôt que du bureau ?',
+    options: [
+      'On part du cas le plus contraint et on enrichit : la feuille de style de base reste simple',
+      'Les mobiles ne savent pas interpréter les requêtes de média',
+      'Le référencement pénalise les sites conçus pour le bureau',
+      'Les écrans larges n’ont pas besoin de mise en forme spécifique',
+    ],
+    bonneReponse: 0,
+    explication:
+      'En partant du bureau, chaque règle doit ensuite être défaite pour les petits écrans, et la feuille de style se remplit d’annulations. En partant du mobile, on ajoute au lieu de retirer. C’est aussi cohérent avec l’usage : sur beaucoup de sites, la majorité des visites vient du mobile.',
+  },
+  {
+    id: 'front-022',
+    theme: 'front-end',
+    type: 'remettre_ordre',
+    difficulte: 2,
+    enonce: 'Remettez dans l’ordre le traitement de l’envoi d’un formulaire côté client.',
+    elements: [
+      'Intercepter l’événement d’envoi et empêcher le rechargement de la page',
+      'Lire les valeurs saisies dans les champs',
+      'Valider le format et afficher les erreurs éventuelles',
+      'Envoyer la requête vers l’API avec le corps en JSON',
+      'Traiter la réponse : succès affiché ou erreurs du serveur remontées à l’utilisateur',
+    ],
+    explication:
+      'L’interception vient en premier, sinon le navigateur recharge la page et le reste du code ne s’exécute jamais. La dernière étape est celle qu’on bâcle le plus : afficher l’erreur renvoyée par le serveur au bon endroit, et pas seulement dans la console.',
+  },
 ];

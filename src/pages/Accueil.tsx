@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useCoursIndex } from '../hooks/useCours';
 import { useProgression } from '../hooks/useProgression';
-import { useSectionsOuvertes } from '../hooks/useSectionsOuvertes';
+import { useDepliant } from '../hooks/useDepliants';
 import { SLUG_TO_THEME, THEME_TO_SLUG } from '../data/questions/chapitres';
 import { NB_QUESTIONS_PAR_THEME, NB_QUESTIONS_TOTAL } from '../data/questions/compte';
 import { THEMES, THEME_LABELS } from '../types/quiz';
@@ -87,7 +87,7 @@ function LigneTheme({ score }: { score: ScoreTheme }) {
 export default function Accueil() {
   const { chapitres, loading } = useCoursIndex();
   const { scores, erreurs, derniereLecture } = useProgression();
-  const { ouvertes, basculer } = useSectionsOuvertes('revision-cda-accueil', () => []);
+  const [programmeOuvert, basculerProgramme] = useDepliant('revision-cda-accueil-programme');
 
   if (loading) {
     return <div className="flex h-64 items-center justify-center text-ardoise-400">Chargement…</div>;
@@ -243,8 +243,8 @@ export default function Accueil() {
 
       <section className="mt-8 border-t border-ardoise-200 pt-4 dark:border-ardoise-800">
         <Depliant
-          ouvert={ouvertes.has('programme')}
-          onBasculer={() => basculer('programme')}
+          ouvert={programmeOuvert}
+          onBasculer={basculerProgramme}
           classeEntete="text-ardoise-600 hover:bg-ardoise-100 dark:text-ardoise-400 dark:hover:bg-ardoise-800"
           titre={
             <span className="text-xs font-bold tracking-wider uppercase">Programme complet</span>

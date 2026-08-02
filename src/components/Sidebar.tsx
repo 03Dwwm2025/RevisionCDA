@@ -4,7 +4,7 @@ import type { ChapitreIndex } from '../types/cours';
 import { SLUG_TO_THEME } from '../data/questions/chapitres';
 import { NB_QUESTIONS_PAR_THEME } from '../data/questions/compte';
 import { accentPartie } from '../utils/parties';
-import { useSectionsOuvertes } from '../hooks/useSectionsOuvertes';
+import { useSectionExclusive } from '../hooks/useDepliants';
 import Depliant from './Depliant';
 import Icone from './Icone';
 import type { NomIcone } from './Icone';
@@ -75,14 +75,15 @@ export default function Sidebar({ chapitres, nbErreurs, onNaviguer }: Props) {
     return table;
   }, [chapitres]);
 
-  // La partie du chapitre ouvert reste dépliée, même si elle était refermée.
-  const partieCourante = slug
-    ? chapitres.find((c) => slugDe(c.file) === slug)?.part
-    : undefined;
+  // Naviguer vers un chapitre déplie sa partie et referme les autres.
+  const partieCourante =
+    (slug ? chapitres.find((c) => slugDe(c.file) === slug)?.part : null) ?? null;
 
-  const { ouvertes, basculer } = useSectionsOuvertes('revision-cda-parties-ouvertes', () => [
+  const { ouverte, basculer } = useSectionExclusive(
+    'revision-cda-partie-ouverte',
+    partieCourante,
     'PARTIE I — CONCEPTION',
-  ]);
+  );
 
   return (
     <nav
@@ -104,7 +105,7 @@ export default function Sidebar({ chapitres, nbErreurs, onNaviguer }: Props) {
       <div className="space-y-0.5">
         {[...parParties.entries()].map(([partie, items]) => {
           const accent = accentPartie(partie);
-          const ouvert = ouvertes.has(partie) || partie === partieCourante;
+          const ouvert = partie === ouverte;
 
           return (
             <Depliant
